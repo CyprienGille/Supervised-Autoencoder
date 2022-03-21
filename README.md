@@ -36,6 +36,8 @@ To run this code, you will need :
 - [Pytorch](https://pytorch.org/get-started/locally/).
 - The following packages, all of which except captum and shap are **usually included in the anaconda distribution** : [numpy](https://numpy.org/install/), [matplotlib](https://matplotlib.org/stable/users/installing/index.html), [scikit-learn](https://scikit-learn.org/stable/install.html), [pandas](https://pandas.pydata.org/getting_started.html), [shap](https://pypi.org/project/shap/), [captum](https://captum.ai/#quickstart). To install any package, you can use anaconda navigator's built-in environment manager.
 
+See `requirements.txt` for the exact versions on which this code was developed.
+
 ### **How to use**
 
 Everything is ready, you can just run the script you want using, for example, the run code button of your Spyder IDE. Alternatively, you can run the command `python [script_name].py` in the Anaconda Prompt from the root of this folder (i.e. where you downloaded and unzipped this repository).
