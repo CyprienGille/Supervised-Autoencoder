@@ -84,18 +84,18 @@ if __name__ == "__main__":
     N_EPOCHS = 30
     N_EPOCHS_MASKGRAD = 30  # number of epochs for training masked gradient
     LR = 0.0005  # Learning rate
-    BATCH_SIZE = 8  # Optimize the trade off between accuracy and Computational time
+    BATCH_SIZE = 8  # Optimize the trade off between accuracy and computational time
     LOSS_LAMBDA = 0.001  # Total loss =λ * loss_autoencoder +  loss_classification
-    bW = 1  # Kernel size for distributions
+    bW = 0.5  # Kernel size for distributions
     # Scaling
     doScale = True
-    #    doScale = False
     # log transform
     doLog = True
 
+    # loss function for reconstruction
     criterion_reconstruction = nn.SmoothL1Loss(reduction="sum")  # SmoothL1Loss
 
-    # Loss functions for classification
+    # Loss function for classification
     criterion_classification = nn.CrossEntropyLoss(reduction="sum")
 
     TIRO_FORMAT = True
@@ -103,22 +103,15 @@ if __name__ == "__main__":
     # file_name = "BRAIN_MID.csv"
     file_name = "GC_Brest_D_MB.csv"
 
-    # Choose net
+    # Choose Net
     # net_name = "LeNet"
     net_name = "DNN"
-    n_hidden = 96  # nombre de neurones sur la couche cachee du DNN
-
-    # Save Results or not
-    SAVE_FILE = True
-    # Output Path
-    outputPath = "results_dnn/" + file_name.split(".")[0] + "/"
-    if not os.path.exists(outputPath):  # make the directory if it does not exist
-        os.makedirs(outputPath)
+    n_hidden = 96  # amount of neurons on netbio's hidden layer
 
     # Do pca or t-SNE
     Do_pca = True
     Do_tSNE = True
-    run_model = "No_proj"
+    run_model = "No_proj"  # default model run
     # Do projection at the middle layer or not
     DO_PROJ_middle = False
 
@@ -133,34 +126,38 @@ if __name__ == "__main__":
         TYPE_PROJ = "No_proj"
         TYPE_PROJ_NAME = "No_proj"
     else:
-        #        TYPE_PROJ = ft.proj_l1ball         # projection l1
-        TYPE_PROJ = fd.proj_l11ball  # original projection l11 (les colonnes a zero)
-        #        TYPE_PROJ = ft.proj_l21ball        # projection l21
+        # TYPE_PROJ = ft.proj_l1ball    # projection l1
+        TYPE_PROJ = fd.proj_l11ball  # original projection l11 (col-wise zeros)
+        # TYPE_PROJ = ft.proj_l21ball   # projection l21
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
 
     AXIS = 0  #  for PGL21
 
     # Top genes params
-
     DoTopGenes = True
-    #    DoTopGenes = False
+
+    # Save Results or not
+    SAVE_FILE = True
+    # Output Path
+    outputPath = "results_dnn/" + file_name.split(".")[0] + "/"
+    if not os.path.exists(outputPath):  # make the directory if it does not exist
+        os.makedirs(outputPath)
 
     ETA = 10000  # Control feature selection
-    # ------------ Main loop ---------
+    # ------------ Main routine ---------
     # Load data
-
     X, Y, feature_name, label_name, patient_name, LFC_Rank = fd.ReadData(
         file_name, TIRO_FORMAT=TIRO_FORMAT, doScale=doScale, doLog=doLog
-    )  # Load files datas
-
-    # LFC_Rank.to_csv(outputPath+'/LFC_rank.csv')
+    )
 
     feature_len = len(feature_name)
     class_len = len(label_name)
-    print("Number of feature: {}, Number of class: {}".format(feature_len, class_len))
+    print(f"Number of features: {feature_len}, Number of classes: {class_len}")
 
+    # matrices to store accuracies
     accuracy_train = np.zeros((nfold * len(Seed), class_len + 1))
     accuracy_test = np.zeros((nfold * len(Seed), class_len + 1))
+    # matrices to store metrics
     data_train = np.zeros((nfold * len(Seed), 7))
     data_test = np.zeros((nfold * len(Seed), 7))
     correct_prediction = []
@@ -218,8 +215,8 @@ if __name__ == "__main__":
                 AXIS=AXIS,
             )
             labelpredict = data_encoder[:, :-1].max(1)[1].cpu().numpy()
-            # Do masked gradient
 
+            # Do masked gradient
             if GRADIENT_MASK:
                 print("\n--------Running with masked gradient-----")
                 print("-----------------------")
@@ -309,7 +306,6 @@ if __name__ == "__main__":
 
             accuracy_train[s * 4 + i] = class_train
             accuracy_test[s * 4 + i] = class_test
-            # silhouette score
             X_encoder = data_encoder[:, :-1]
             labels_encoder = data_encoder[:, -1]
             data_encoder_test = data_encoder_test.cpu().detach()
@@ -362,15 +358,15 @@ if __name__ == "__main__":
 
             # Get Top Genes of each class
 
-            #         method = 'Shap'       # (SHapley Additive exPlanation) A nb_samples should be define
+            # method = 'Shap'   # (SHapley Additive exPlanation) needs a nb_samples
             nb_samples = 300  # Randomly choose nb_samples to calculate their Shap Value, time vs nb_samples seems exponential
-            #        method = 'Captum_ig'   # Integrated Gradients
+            # method = 'Captum_ig'   # Integrated Gradients
             method = "Captum_dl"  # Deeplift
-            #        method = 'Captum_gs'  # GradientShap
+            # method = 'Captum_gs'  # GradientShap
 
             if DoTopGenes:
                 tps1 = time.perf_counter()
-                if i == 0:  # first fold, we never did topgenes before
+                if i == 0:  # first fold, never did topgenes before
                     print("Running topGenes...")
                     df_topGenes = fd.topGenes(
                         X,
@@ -621,7 +617,6 @@ if __name__ == "__main__":
         df_acctest.to_csv(
             "{}{}_acctest.csv".format(outputPath, str(TYPE_PROJ_NAME)), sep=";"
         )
-
         df_metricsTest_classif.to_csv(
             "{}{}_auctest.csv".format(outputPath, str(TYPE_PROJ_NAME)), sep=";"
         )

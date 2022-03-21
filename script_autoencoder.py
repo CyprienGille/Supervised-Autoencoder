@@ -53,7 +53,6 @@ if "../functions/" not in sys.path:
 
 
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import pandas as pd
 import torch
 import numpy as np
@@ -92,7 +91,6 @@ if __name__ == "__main__":
     LR = 0.0005  # Learning rate
     BATCH_SIZE = 8  # Optimize the trade off between accuracy and computational time
     LOSS_LAMBDA = 0.001  # Total loss =λ * loss_autoencoder +  loss_classification
-    # LOSS_LAMBDA = 0
     bW = 0.5  # Kernel size for distribution plots
 
     # Scaling
@@ -143,8 +141,6 @@ if __name__ == "__main__":
     AXIS = 0  #  for PGL21
 
     # Top genes params
-
-    # DoTopGenes = True
     DoTopGenes = True  # Compute feature rankings
 
     # Save Results or not
@@ -396,7 +392,7 @@ if __name__ == "__main__":
 
             # Get Top Genes of each class
 
-            # method = 'Shap'    # (SHapley Additive exPlanation) needs a nb_samples
+            # method = 'Shap'   # (SHapley Additive exPlanation) needs a nb_samples
             nb_samples = 300  # Randomly choose nb_samples to calculate their Shap Value, time vs nb_samples seems exponential
             # method = 'Captum_ig'   # Integrated Gradients
             method = "Captum_dl"  # Deeplift
