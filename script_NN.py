@@ -72,14 +72,10 @@ import seaborn as sns
 if __name__ == "__main__":
     # ------------ Parameters ---------
 
-    ####### Set of parameters : #######
-    # Lung : ETA = 200 Seed = [4, 5, 6]Use log and scale
-    # Brain : ETA = 50 Seed = [4, 5, 6]Use lo and scale
-    # Thyroid : ETA = 50 Seed = [4, 5, 6] No log No scale
+    ####### Set of parameters : ######
 
     # Set seed
     Seed = [5, 6, 7]
-    ETA = 100  # Control feature selection 150 por Lung 15 pour Thyoide
 
     # Set device (Gpu or cpu)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -104,9 +100,7 @@ if __name__ == "__main__":
 
     TIRO_FORMAT = True
     # file_name = "LUNG.csv"
-    # file_name = 'COVID.csv'
     # file_name = "BRAIN_MID.csv"
-    # file_name = "Th12F_meanFill_R.csv"
     file_name = "GC_Brest_D_MB.csv"
 
     # Choose net
@@ -151,6 +145,7 @@ if __name__ == "__main__":
     DoTopGenes = True
     #    DoTopGenes = False
 
+    ETA = 10000  # Control feature selection
     # ------------ Main loop ---------
     # Load data
 

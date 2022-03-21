@@ -20,9 +20,9 @@ from sklearn.preprocessing import scale
 if __name__ == "__main__":
 
     # Set params :
-    filename = "LUNG.csv"
+    # filename = "LUNG.csv"
     # filename = "BRAIN_MID.csv"
-    # filename = "GC_Brest_D_MB.csv"
+    filename = "GC_Brest_D_MB.csv"
 
     outputPath = "results_compare/" + filename.split(".")[0] + "/"
     if not os.path.exists(outputPath):  # make the directory if it does not exist
@@ -34,10 +34,6 @@ if __name__ == "__main__":
         "plsda",
         "RF",
         # "logreg",
-        # "NN",
-        # "Adaboost",
-        # "GaussianNB",
-        # "Lasso",
     ]  # Other ML algorithms to compare to
 
     doScale = True  # scaling along rows
