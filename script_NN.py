@@ -2,46 +2,20 @@
 """
 Copyright   I3S CNRS UCA 
 
-This code is an implementation of statistical evaluation of our autoencoder discribe in the article :
-An efficient diagnostic that uses the latent space of a Non-Parametric Supervised Autoencoder 
-for metabolomic datasets of clinical studies.
+This code is an implementation of the statistical evaluation of the DNN described in the article :
+    Learning a confidence score and the latent space of a new Supervised Autoencoder 
+for diagnosis and prognosis in clinical metabolomic studies.
 
 When using this code , please cite
 
- Barlaud, Michel and  Guyard, Frederic
- Learning sparse deep neural networks using efficient structured projections on convex constraints for green ai. ICPR 2020 Milan Italy (2020)
-
-@INPROCEEDINGS{9412162,  
-               author={Barlaud, Michel and Guyard, Frédéric},  
-               booktitle={2020 25th International Conference on Pattern Recognition (ICPR)},   
-               title={Learning sparse deep neural networks using efficient structured projections on convex constraints for green AI},  
-               year={2021}, 
-               volume={}, 
-               number={}, 
-               pages={1566-1573}, 
-               doi={10.1109/ICPR48806.2021.9412162}}
-
-and 
-
 David Chardin, Cyprien Gille, Thierry Pourcher and Michel Barlaud :
-    An efficient diagnostic that uses the latent space of a Non-Parametric Supervised Autoencoder 
-for metabolomic datasets of clinical studies.
-
-Parameters : 
+    Learning a confidence score and the latent space of a new Supervised Autoencoder
+for diagnosis and prognosis in clinical metabolomic studies.
     
-    - Seed (line 80)
-    - Database (line 106) (variable file_name)
-    - Projection (line 145)
-    - Constraint ETA (line 81)
-    - Scaling (line 163)
-    - Metabolomic selection (line 156)
-    
-Results_stat
-    -accuracy
-    -Probability
-    -Top features 
-    
-    
+Results_DNN
+    -Accuracy, F1 score (+other metrics)
+    -Predicted labels on test set with confidence scores
+    -Top features  
     
 """
 #%%
