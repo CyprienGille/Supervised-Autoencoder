@@ -1,8 +1,7 @@
 """
 This code is an implementation of the other methods used for comparison in the article :
-> Accurate Diagnosis with a confidence score 
-> using the latent space of a new Supervised Autoencoder
-> for clinical metabolomic studies.
+    Learning a confidence score and the latent space of a new Supervised Autoencoder 
+for diagnosis and prognosis in clinical metabolomic studies.
 """
 #%%
 import sys
@@ -34,7 +33,7 @@ if __name__ == "__main__":
         "plsda",
         "RF",
         # "logreg",
-    ]  # Other ML algorithms to compare to
+    ]  # ML algorithms to compare to
 
     doScale = True  # scaling along rows
     doTopgenes = True  # Features selection
@@ -115,7 +114,7 @@ if __name__ == "__main__":
     aucTestCompare_final = aucTestCompare_final.T.join(std).T
     aucTestCompare_final.to_csv(outputPath + "aucCompare.csv")
 
-    if True:
+    if doTopgenes:
         for i, algo in enumerate(alglist):
 
             df_featureList_final[i].to_csv(f"{outputPath}topgenes_{algo}.csv")
