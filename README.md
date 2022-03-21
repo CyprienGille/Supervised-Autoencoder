@@ -40,6 +40,6 @@ To run this code, you will need :
 
 Everything is ready, you can just run the script you want using, for example, the run code button of your Spyder IDE. Alternatively, you can run the command `python [script_name].py` in the Anaconda Prompt from the root of this folder (i.e. where you downloaded and unzipped this repository).
 
-Each script will produce results (statistical metrics.) in a results folder.
+Each script will produce results (statistical metrics, top features...) in a results folder.
 
 You can change the database used, and other parameters, near the start of each script.
