@@ -497,14 +497,6 @@ if __name__ == "__main__":
     # print(df_metricsTest_clustering)
     print(df_metricsTest_classif)
 
-    # Reconstruction by using the centers in laten space and datas after interpellation
-    center_mean, center_distance = fd.Reconstruction(0.2, data_encoder, net, class_len)
-
-    # Do pca,tSNE for encoder data
-    if Do_pca and Do_tSNE:
-        tit = "Latent Space"
-        fd.ShowPcaTsne(X, Y, data_encoder, center_distance, class_len, tit)
-
     if DoTopGenes:
         df = pd.read_csv(
             "{}{}_topGenes_Mean_{}_{}.csv".format(
@@ -536,57 +528,6 @@ if __name__ == "__main__":
             index=0,
         )
 
-    plt.figure()
-    plt.title("Kernel Density")
-    plt.plot([0.5, 0.5, 0.5], [-1, 0, 3])
-    lab = 0
-    for col in softmax.iloc[:, 2:]:
-        distrib = softmax[col].where(softmax["Labels"] == lab).dropna()
-        if lab == 0:
-            sns.kdeplot(1 - distrib, bw=0.1, shade=True, color="tab:blue")
-            # sns.kdeplot(1 - distrib, bw=0.1, fill=True, shade="True")
-        else:
-            sns.kdeplot(distrib, bw=0.1, shade=True, color="tab:orange")
-            # sns.kdeplot(distrib, bw=0.1, fill=True, shade="True")
-
-        lab += 1
-
-    spasity_percentage_entry = {}
-    for keys in spasity_w_entry.keys():
-        spasity_percentage_entry[keys] = spasity_w_entry[keys] * 100
-    print("spasity % of all layers entry \n", spasity_percentage_entry)
-    print("-----------------------")
-    weights, spasity_w = fnp.weights_and_sparsity(net.encoder)
-    spasity_percentage = {}
-    for keys in spasity_w.keys():
-        spasity_percentage[keys] = spasity_w[keys] * 100
-    print("spasity % of all layers \n", spasity_percentage)
-    print("-----------------------")
-
-    mat_in = net.state_dict()["encoder.0.weight"]
-
-    mat_col_sparsity = fd.sparsity_col(mat_in, device=device)
-    print(" Colonnes sparsity sur la matrice d'entrée: \n", mat_col_sparsity)
-    mat_in_sparsity = fd.sparsity_line(mat_in, device=device)
-    print(" ligne sparsity sur la matrice d'entrée: \n", mat_in_sparsity)
-    layer_list = [x for x in weights.values()]
-    titile_list = [x for x in spasity_w.keys()]
-    fd.show_img(layer_list, file_name)
-
-    # Loss figure
-    if os.path.exists(file_name.split(".")[0] + "_Loss_No_proj.npy") and os.path.exists(
-        file_name.split(".")[0] + "_Loss_MaskGrad.npy"
-    ):
-        loss_no_proj = np.load(file_name.split(".")[0] + "_Loss_No_proj.npy")
-        loss_with_proj = np.load(file_name.split(".")[0] + "_Loss_MaskGrad.npy")
-        plt.figure()
-        plt.title(file_name.split(".")[0] + " Loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("TotalLoss")
-        plt.plot(loss_no_proj, label="No projection")
-        plt.plot(loss_with_proj, label="With projection ")
-        plt.legend()
-        plt.show()
     if SAVE_FILE:
         df_acctest.to_csv(
             "{}{}_acctest.csv".format(outputPath, str(TYPE_PROJ_NAME)), sep=";"
