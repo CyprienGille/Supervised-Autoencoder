@@ -38,7 +38,6 @@ from sklearn import metrics
 import functions.functions_DNN as fd
 import functions.functions_network_pytorch as fnp
 from sklearn.metrics import precision_recall_fscore_support
-import seaborn as sns
 
 
 #################################
