@@ -86,42 +86,41 @@ def proj_l1ball(w0, eta, device="cpu"):
     return Q
 
 
-def proj_l21ball(w0, eta, axis=1, device="cpu"):
+def proj_l21ball(w2, eta, device="cpu"):
 
-    w = torch.as_tensor(w0, dtype=torch.get_default_dtype(), device=device)
-    init_shape = w.size()
+    w = torch.as_tensor(w2, dtype=torch.get_default_dtype(), device=device)
 
-    x = torch.as_tensor(w, dtype=torch.get_default_dtype(), device=device)
-
-    if axis is None:
-        axis = tuple(range(x.dim()))
-    elif not isinstance(axis, tuple):
-        try:
-            axis = int(axis)
-        except Exception:
-            raise TypeError("'axis' must be None, an integer or a tuple of integers")
-
-    if axis > x.dim() - 1:
-        axis = x.dim() - 1
-    Y = torch.norm(x, 2, dim=axis)
-    T = proj_l1ball(Y, eta, device=device).reshape(Y.shape)
-    max_TY = torch.max(T, Y)
-    x0 = torch.where(max_TY == 0, torch.zeros_like(T), torch.div(T, max_TY))
-    if axis == 0:
-        x = torch.mul(x, x0)
+    if w.dim() == 1:
+        Q = proj_l1ball(w, eta, device=device)
     else:
-        order = tuple(np.arange(x.dim()))
-        new_order = (order[axis],) + order[:axis] + order[axis + 1 :]
-        reverse_order = (order[axis],) + (0,) + order[axis + 1 :]
-        x = torch.mul(x.permute(new_order), x0)
-        x = x.permute(reverse_order)
 
-    Q = x.reshape(init_shape).clone().detach().requires_grad_(True)
+        init_shape = w.shape
+        Res = torch.empty(init_shape)
+        nrow, ncol = init_shape[0:2]
 
-    if not torch.is_tensor(w0):
+        W = torch.tensor(
+            [torch.sum(torch.abs(w[:, i])).data.item() for i in range(ncol)]
+        )
+
+        PW = proj_l1ball(W, eta, device=device)
+
+        for i in range(ncol):
+            Res[:, i] = proj_l2ball(w[:, i], PW[i].data.item(), device=device)
+
+        Q = Res.clone().detach().requires_grad_(True)
+
+    if not torch.is_tensor(w2):
         Q = Q.data.numpy()
-
     return Q
+
+
+def proj_l2ball(w0, eta, device="cpu"):
+    w = torch.as_tensor(w0, dtype=torch.get_default_dtype(), device=device)
+
+    n = torch.linalg.norm(w, ord=2)
+    if n <= eta:
+        return w
+    return torch.mul(eta / n, w)
 
 
 ## fold in ["local","full",partial"]
@@ -1368,9 +1367,10 @@ def Projection(W, TYPE_PROJ=proj_l11ball, ETA=100, AXIS=0, ETA_STAR=100, device=
         TYPE_PROJ == proj_l1ball
         or TYPE_PROJ == proj_l11ball
         or TYPE_PROJ == proj_l11ball_line
+        or TYPE_PROJ == proj_l21ball
     ):
         W_new = TYPE_PROJ(W, ETA, device)
-    if TYPE_PROJ == proj_l21ball or TYPE_PROJ == proj_l12ball:
+    if TYPE_PROJ == proj_l12ball:
         W_new = TYPE_PROJ(W, ETA, AXIS, device=device)
     if TYPE_PROJ == proj_nuclear:
         W_new = TYPE_PROJ(W, ETA_STAR, device=device)

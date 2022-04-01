@@ -69,10 +69,10 @@ if __name__ == "__main__":
     ####### Set of parameters : #######
     # Lung : ETA = 200
     # Brain : ETA = 50
-    # Breast : ETA = 100
+    # Breast : ETA = 100 or 80
 
     # Set seed
-    Seed = [5, 6, 7]
+    Seed = [33]
     ETA = 100  # Controls feature selection (projection)
 
     # Set device (Gpu or cpu)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     else:
         # TYPE_PROJ = ft.proj_l1ball    # projection l1
         TYPE_PROJ = ft.proj_l11ball  # original projection l11 (col-wise zeros)
-        # TYPE_PROJ = ft.proj_l21ball   # projection l21
+        # TYPE_PROJ = ft.proj_l21ball  # projection l21
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
 
     AXIS = 0  #  for PGL21
