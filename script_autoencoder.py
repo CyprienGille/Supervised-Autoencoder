@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Breast : ETA = 100 or 80
 
     # Set seed
-    Seed = [33]
+    Seed = [4, 5, 6]
     ETA = 100  # Controls feature selection (projection)
 
     # Set device (Gpu or cpu)
