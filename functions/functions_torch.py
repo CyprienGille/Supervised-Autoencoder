@@ -275,6 +275,88 @@ def proj_l12ball(V, eta, axis=1, threshold=0.001, device="cpu"):
     return W.float()
 
 
+def proj_l1inf_numpy(Y, c, tol=1e-5, direction="row"):
+    """
+    {X : sum_n max_m |X(n,m)| <= c}
+    for some given c>0
+
+        Author: Laurent Condat
+        Version: 1.0, Sept. 1, 2017
+    
+    This algorithm is new, to the author's knowledge. It is based
+    on the same ideas as for projection onto the l1 ball, see
+    L. Condat, "Fast projection onto the simplex and the l1 ball",
+    Mathematical Programming, vol. 158, no. 1, pp. 575-585, 2016. 
+    
+    The algorithm is exact and terminates in finite time*. Its
+    average complexity, for Y of size N x M, is O(NM.log(M)). 
+    Its worst case complexity, never found in practice, is
+    O(NM.log(M) + N^2.M).
+
+    Note : This is a numpy transcription of the original MATLAB code
+    *Due to floating point errors, the actual implementation of the algorithm
+    uses a tolerance parameter to guarantee halting of the program
+    """
+    added_dimension = False
+
+    if direction == "col":
+        Y = np.transpose(Y)
+
+    if Y.ndim == 1:
+        # for vectors
+        Y = np.expand_dims(Y, axis=0)
+        added_dimension = True
+
+    X = np.flip(np.sort(np.abs(Y), axis=1), axis=1)
+    v = np.sum(X[:, 0])
+    if v <= c:
+        # inside the ball
+        return Y
+    N, M = Y.shape
+    S = np.cumsum(X, axis=1)
+    idx = np.ones((N, 1), dtype=int)
+    theta = (v - c) / N
+    mu = np.zeros((N, 1))
+    active = np.ones((N, 1))
+    theta_old = 0
+    while np.abs(theta_old - theta) > tol:
+        for n in range(N):
+            if active[n]:
+                j = idx[n]
+                while (j < M) and ((S[n, j - 1] - theta) / j) < X[n, j]:
+                    j += 1
+                idx[n] = j
+                mu[n] = S[n, j - 1] / j
+                if j == M and (mu[n] - (theta / j)) <= 0:
+                    active[n] = 0
+                    mu[n] = 0
+        theta_old = theta
+        theta = (np.sum(mu) - c) / (np.sum(active / idx))
+    X = np.minimum(np.abs(Y), (mu - theta / idx) * active)
+    X = X * np.sign(Y)
+
+    if added_dimension:
+        X = np.squeeze(X)
+
+    if direction == "col":
+        X = np.transpose(X)
+    return X
+
+
+def proj_l1infball(w0, eta, AXIS=1, device="cpu"):
+    """See the documentation of proj_l1inf_numpy for details
+    Note: Due to 
+    1. numpy's C implementation and 
+    2. the non-parallelizable nature of the algorithm,
+    it is faster to do this projection on the cpu with numpy arrays 
+    than on the gpu with torch tensors
+    """
+    w = w0.detach().cpu().numpy()
+    res = proj_l1inf_numpy(w, eta, direction="col" if AXIS else "row")
+    Q = torch.as_tensor(res, dtype=torch.get_default_dtype(), device=device)
+    return Q
+
+
 def full_fold_conv(M):
 
     if M.dim() > 2:
@@ -1370,7 +1452,7 @@ def Projection(W, TYPE_PROJ=proj_l11ball, ETA=100, AXIS=0, ETA_STAR=100, device=
         or TYPE_PROJ == proj_l21ball
     ):
         W_new = TYPE_PROJ(W, ETA, device)
-    if TYPE_PROJ == proj_l12ball:
+    if TYPE_PROJ == proj_l12ball or TYPE_PROJ == proj_l1infball:
         W_new = TYPE_PROJ(W, ETA, AXIS, device=device)
     if TYPE_PROJ == proj_nuclear:
         W_new = TYPE_PROJ(W, ETA_STAR, device=device)

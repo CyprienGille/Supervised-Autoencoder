@@ -129,9 +129,12 @@ if __name__ == "__main__":
         # TYPE_PROJ = ft.proj_l1ball    # projection l1
         TYPE_PROJ = ft.proj_l11ball  # original projection l11 (col-wise zeros)
         # TYPE_PROJ = ft.proj_l21ball  # projection l21
+        # TYPE_PROJ = ft.proj_l1infball  # projection l1,inf
+        # (note: L1inf requires a small ETA to produce sparsity, like 0.6 on Breast)
+
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
 
-    AXIS = 0  #  for PGL21
+    AXIS = 1  #  1 for columns (features), 0 for rows (neurons)
 
     # Top genes params
     DoTopGenes = True  # Compute feature rankings
