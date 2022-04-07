@@ -343,7 +343,7 @@ def proj_l1inf_numpy(Y, c, tol=1e-5, direction="row"):
     return X
 
 
-def proj_l1infball(w0, eta, AXIS=1, device="cpu"):
+def proj_l1infball(w0, eta, AXIS=1, device="cpu", tol=1e-5):
     """See the documentation of proj_l1inf_numpy for details
     Note: Due to 
     1. numpy's C implementation and 
@@ -352,7 +352,7 @@ def proj_l1infball(w0, eta, AXIS=1, device="cpu"):
     than on the gpu with torch tensors
     """
     w = w0.detach().cpu().numpy()
-    res = proj_l1inf_numpy(w, eta, direction="col" if AXIS else "row")
+    res = proj_l1inf_numpy(w, eta, direction="col" if AXIS else "row", tol=tol)
     Q = torch.as_tensor(res, dtype=torch.get_default_dtype(), device=device)
     return Q
 
@@ -950,6 +950,7 @@ def RunAutoEncoder(
     DO_PROJ_DECODER,
     ETA,
     ETA_STAR=100,
+    TOL=1e-5,
     AXIS=0,
 ):
     """ Main loop for autoencoder, run autoencoder and return the encode and decode matrix
@@ -1072,7 +1073,7 @@ def RunAutoEncoder(
                     )
                 else:
                     param.data = Projection(
-                        param.data, TYPE_PROJ, ETA, ETA_STAR, AXIS, device
+                        param.data, TYPE_PROJ, ETA, ETA_STAR, AXIS, device, TOL=TOL,
                     ).to(device)
 
         # testing our model
@@ -1429,7 +1430,9 @@ def showMetricsResult_unsupervised(data_train, fold_nb):
     return df_accTrain
 
 
-def Projection(W, TYPE_PROJ=proj_l11ball, ETA=100, AXIS=0, ETA_STAR=100, device="cpu"):
+def Projection(
+    W, TYPE_PROJ=proj_l11ball, ETA=100, AXIS=0, ETA_STAR=100, device="cpu", TOL=1e-5
+):
     """ For different projection, give the correct args and do projection
     Args:
         W: tensor - net weight matrix
@@ -1452,8 +1455,10 @@ def Projection(W, TYPE_PROJ=proj_l11ball, ETA=100, AXIS=0, ETA_STAR=100, device=
         or TYPE_PROJ == proj_l21ball
     ):
         W_new = TYPE_PROJ(W, ETA, device)
-    if TYPE_PROJ == proj_l12ball or TYPE_PROJ == proj_l1infball:
+    if TYPE_PROJ == proj_l12ball:
         W_new = TYPE_PROJ(W, ETA, AXIS, device=device)
+    if TYPE_PROJ == proj_l1infball:
+        W_new = TYPE_PROJ(W, ETA, AXIS, device=device, tol=TOL)
     if TYPE_PROJ == proj_nuclear:
         W_new = TYPE_PROJ(W, ETA_STAR, device=device)
     return W_new

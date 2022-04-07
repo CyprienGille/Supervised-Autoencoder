@@ -129,12 +129,14 @@ if __name__ == "__main__":
         # TYPE_PROJ = ft.proj_l1ball    # projection l1
         TYPE_PROJ = ft.proj_l11ball  # original projection l11 (col-wise zeros)
         # TYPE_PROJ = ft.proj_l21ball  # projection l21
+
         # TYPE_PROJ = ft.proj_l1infball  # projection l1,inf
         # (note: L1inf requires a small ETA to produce sparsity, like 0.6 on Breast)
 
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
 
     AXIS = 1  #  1 for columns (features), 0 for rows (neurons)
+    TOL = 1e-4  # error margin for the L1inf algorithm
 
     # Top genes params
     DoTopGenes = True  # Compute feature rankings
@@ -225,6 +227,7 @@ if __name__ == "__main__":
                 DO_PROJ_DECODER,
                 ETA,
                 AXIS=AXIS,
+                TOL=TOL,
             )
             labelpredict = data_encoder[:, :-1].max(1)[1].cpu().numpy()
 
