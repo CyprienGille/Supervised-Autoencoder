@@ -311,29 +311,30 @@ def proj_l1inf_numpy(Y, c, tol=1e-5, direction="row"):
     v = np.sum(X[:, 0])
     if v <= c:
         # inside the ball
-        return Y
-    N, M = Y.shape
-    S = np.cumsum(X, axis=1)
-    idx = np.ones((N, 1), dtype=int)
-    theta = (v - c) / N
-    mu = np.zeros((N, 1))
-    active = np.ones((N, 1))
-    theta_old = 0
-    while np.abs(theta_old - theta) > tol:
-        for n in range(N):
-            if active[n]:
-                j = idx[n]
-                while (j < M) and ((S[n, j - 1] - theta) / j) < X[n, j]:
-                    j += 1
-                idx[n] = j
-                mu[n] = S[n, j - 1] / j
-                if j == M and (mu[n] - (theta / j)) <= 0:
-                    active[n] = 0
-                    mu[n] = 0
-        theta_old = theta
-        theta = (np.sum(mu) - c) / (np.sum(active / idx))
-    X = np.minimum(np.abs(Y), (mu - theta / idx) * active)
-    X = X * np.sign(Y)
+        X = Y
+    else:
+        N, M = Y.shape
+        S = np.cumsum(X, axis=1)
+        idx = np.ones((N, 1), dtype=int)
+        theta = (v - c) / N
+        mu = np.zeros((N, 1))
+        active = np.ones((N, 1))
+        theta_old = 0
+        while np.abs(theta_old - theta) > tol:
+            for n in range(N):
+                if active[n]:
+                    j = idx[n]
+                    while (j < M) and ((S[n, j - 1] - theta) / j) < X[n, j]:
+                        j += 1
+                    idx[n] = j
+                    mu[n] = S[n, j - 1] / j
+                    if j == M and (mu[n] - (theta / j)) <= 0:
+                        active[n] = 0
+                        mu[n] = 0
+            theta_old = theta
+            theta = (np.sum(mu) - c) / (np.sum(active / idx))
+        X = np.minimum(np.abs(Y), (mu - theta / idx) * active)
+        X = X * np.sign(Y)
 
     if added_dimension:
         X = np.squeeze(X)
