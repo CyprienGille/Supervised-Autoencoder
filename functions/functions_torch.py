@@ -1082,7 +1082,7 @@ def RunAutoEncoder(
         running_classification, running_reconstruction = 0, 0
         net.eval()
 
-        for i, batch in enumerate(tqdm(test_dl)):
+        for i, batch in enumerate(test_dl):
             with torch.no_grad():
                 x = batch[0]
                 labels = batch[1]
@@ -1207,7 +1207,7 @@ def runBestNet(
     best_value = np.zeros((1, 1))
     net.load_state_dict(torch.load(str(outputPath) + "best_net"))
     net.eval()
-    for i, batch in enumerate(tqdm(train_dl)):
+    for i, batch in enumerate(train_dl):
         x = batch[0]
         labels = batch[1]
         if torch.cuda.is_available():
@@ -1226,7 +1226,7 @@ def runBestNet(
                     class_train_correct[label] += int(c[i].item())
                 class_train_total[label] += 1
     First = True
-    for i, batch in enumerate(tqdm(test_dl)):
+    for i, batch in enumerate(test_dl):
         with torch.no_grad():
             x = batch[0]
             labels = batch[1]
