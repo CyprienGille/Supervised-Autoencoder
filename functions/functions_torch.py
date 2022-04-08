@@ -993,7 +993,7 @@ def RunAutoEncoder(
         running_loss, running_accuracy = 0, 0
         running_classification, running_reconstruction = 0, 0
         net.train()
-        for i, batch in enumerate(tqdm(train_dl)):
+        for i, batch in enumerate(train_dl):
             x = batch[0]
             labels = batch[1]
 
