@@ -73,7 +73,6 @@ if __name__ == "__main__":
 
     # Set seed
     Seed = [4, 5, 6]
-    ETA = 100  # Controls feature selection (projection)
 
     # Set device (Gpu or cpu)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -117,11 +116,14 @@ if __name__ == "__main__":
     DO_PROJ_DECODER = True
 
     # Do projection (True)  or not (False)
+    ETA = 100  # Controls feature selection (projection) (L1, L11, L21)
+    RHO = 0.6  # Controls feature selection for l1inf
     GRADIENT_MASK = True
     if GRADIENT_MASK:
         run_model = "ProjectionLastEpoch"
 
     # Choose projection function
+
     if not GRADIENT_MASK:
         TYPE_PROJ = "No_proj"
         TYPE_PROJ_NAME = "No_proj"
@@ -131,7 +133,6 @@ if __name__ == "__main__":
         # TYPE_PROJ = ft.proj_l21ball  # projection l21
 
         # TYPE_PROJ = ft.proj_l1infball  # projection l1,inf
-        # (note: L1inf requires a small ETA to produce sparsity, like 0.6 on Breast)
 
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
 
@@ -203,6 +204,8 @@ if __name__ == "__main__":
 
             if GRADIENT_MASK:
                 run_model = "ProjectionLastEpoch"
+                if TYPE_PROJ == ft.proj_l1infball:
+                    ETA = RHO
 
             optimizer = torch.optim.Adam(net.parameters(), lr=LR)
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.1)
