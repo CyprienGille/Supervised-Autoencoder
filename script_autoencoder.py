@@ -93,8 +93,14 @@ if __name__ == "__main__":
     # loss function for reconstruction
     criterion_reconstruction = nn.SmoothL1Loss(reduction="sum")  # SmoothL1Loss
 
-    # Loss function for classification
-    criterion_classification = nn.CrossEntropyLoss(reduction="sum")
+    # Classification
+    # Weights for each class
+    # (see https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html#torch.nn.CrossEntropyLoss for more details)
+    class_weights = [1, 1]
+    # Loss function
+    criterion_classification = nn.CrossEntropyLoss(
+        reduction="sum", weight=torch.Tensor(class_weights).to(device)
+    )
 
     TIRO_FORMAT = True
     # file_name = "LUNG.csv"
