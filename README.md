@@ -1,16 +1,16 @@
 # Supervised Autoencoder
 
-This is the code from : *Accurate Diagnosis with a confidence score using the latent space of a new Supervised Autoencoder for clinical metabolomic studies.*
+This is the code from : *Learning a confidence score and the latent space of a new Supervised Autoencoder for diagnosis and prognosis in clinical metabolomic studies*.
 
 In this repository, you will find the code to replicate the statistical study described in the paper.
   
 When using this code, please cite:
 
-> Barlaud, M., Guyard, F.: Learning sparse deep neural networks using efficient structured projections on convex constraints for green ai. ICPR 2020 Milan Italy (2020)
+> Barlaud, M., Guyard, F.: *Learning sparse deep neural networks using efficient structured projections on convex constraints for green ai.* ICPR 2020 Milan Italy (2020)
 
 and 
 
-> David Chardin, Cyprien Gille, Thierry Pourcher and Michel Barlaud : Accurate Diagnosis with a confidence score using the latent space of a new Supervised Autoencoder for clinical metabolomic studies.
+> David Chardin, Cyprien Gille, Thierry Pourcher and Michel Barlaud : *Learning a confidence score and the latent space of a new Supervised Autoencoder for diagnosis and prognosis in clinical metabolomic studies*. BMC Bioinformatics (2022)
 
 
 ## Table of Contents
