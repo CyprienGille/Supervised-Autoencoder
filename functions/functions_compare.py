@@ -2277,9 +2277,7 @@ def basic_run_other(
                 get_features = lambda m: m.best_estimator_.coef_.transpose()
 
             if alg == "RF":
-                clf = RandomForestClassifier(
-                    n_estimators=400, random_state=10, max_depth=3
-                )
+                clf = RandomForestClassifier(n_estimators=100)
                 get_features = lambda m: m.feature_importances_
 
             if alg == "plsda":
