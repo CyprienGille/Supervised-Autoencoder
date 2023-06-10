@@ -36,7 +36,7 @@ and
 To run this code, you will need :
 - A version of python, 3.8 or newer. If you are new to using python, we recommend downloading anaconda ([here](https://www.anaconda.com/products/individual)) and using Spyder (available by default from the anaconda navigator) to run the code.
 - [Pytorch](https://pytorch.org/get-started/locally/).
-- The following packages, all of which except captum and shap are **usually included in the anaconda distribution** : [numpy](https://numpy.org/install/), [matplotlib](https://matplotlib.org/stable/users/installing/index.html), [scikit-learn](https://scikit-learn.org/stable/install.html), [pandas](https://pandas.pydata.org/getting_started.html), [shap](https://pypi.org/project/shap/), [captum](https://captum.ai/#quickstart). To install any package, you can use anaconda navigator's built-in environment manager.
+- The following packages, all of which except captum and shap are **usually included in the anaconda distribution** : [numpy](https://numpy.org/install/), [matplotlib](https://matplotlib.org/stable/users/installing/index.html), [scikit-learn](https://scikit-learn.org/stable/install.html), [pandas](https://pandas.pydata.org/getting_started.html), [shap](https://pypi.org/project/shap/), [captum](https://captum.ai/#quickstart). To install any package, you can use the anaconda navigator's built-in environment manager.
 
 See `requirements.txt` for the exact package versions on which this code was developed.
 

@@ -1,18 +1,16 @@
-import torch
-import numpy as np
-from matplotlib import pyplot as plt
-
-import pandas as pd
 import time
-from sklearn.model_selection import KFold
-
-
-from scipy import stats
+import numpy as np
+import pandas as pd
 import matplotlib as mpl
+
+import torch
 from torch import nn
 
 from tqdm import tqdm
+from scipy import stats
+from matplotlib import pyplot as plt
 
+from sklearn.model_selection import KFold
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
@@ -23,7 +21,6 @@ except ImportError:
     print(
         "Use '!pip install captum' to install captum; '!pip install shap' to install shap"
     )
-
 
 from captum.attr import (
     GradientShap,
@@ -931,48 +928,77 @@ class netBio(nn.Module):
 
 
 def RunAutoEncoder(
-    net,
-    criterion,
-    optimizer,
-    lr_scheduler,
-    train_dl,
-    train_len,
-    test_dl,
-    test_len,
-    N_EPOCHS,
-    outputPath,
-    SAVE_FILE,
-    DO_PROJ_middle,
-    run_model,
+    net: nn.Module,
+    criterion_reconstruction,
     criterion_classification,
-    LOSS_LAMBDA,
-    feature_name,
+    train_dl,
+    train_len: int,
+    test_dl,
+    test_len: int,
+    optimizer,
+    outputPath: str,
     TYPE_PROJ,
-    DO_PROJ_DECODER,
-    ETA,
+    LOSS_LAMBDA=0.001,
+    lr_scheduler=None,
+    N_EPOCHS=30,
+    run_model="No_Proj",
+    DO_PROJ_MIDDLE=False,
+    DO_PROJ_DECODER=True,
+    ETA=100,
     ETA_STAR=100,
     TOL=1e-5,
     AXIS=0,
 ):
-    """ Main loop for autoencoder, run autoencoder and return the encode and decode matrix
-    
-    Args:
-        net, criterion, optimizer, lr_scheduler: class - net configuration 
-        train_dl,  train_len: pytorch Dataset type - used full data as train set
-        N_EPOCHS : int - number of epoch 
-        outputPath: string - patch to store the encode or decode files 
-        DO_PROJ_middle: bool - Do projection at middle layer or not(default is No) 
-        run_model: string-
-                    'ProjectionLastEpoch' and 'MaskGrad' for double descend
-                    'None': original training
-        criterion_classification: classification loss function
-            
-            
-    Return: 
-        data_encoder: tensor - encoded data
-        data_decoded: tensor - decoded data
+    """Full Autoencoder training loop
+
+    Parameters
+    ----------
+    net : nn.Module
+        The neural network to train and evaluate
+    criterion_reconstruction : loss module
+        The reconstruction loss component
+    criterion_classification : loss module
+        The classification loss component
+    train_dl : DataLoader
+        Training DataLoader
+    train_len : int
+        Number of samples in the training set
+    test_dl : DataLoader
+        Testing/Evaluation DataLoader
+    test_len : int
+        Number of samples in the testing set
+    optimizer : Optimizer
+        PyTorch optimizer of the model's parameters
+    outputPath : str
+        Where to save the results of the run (if SAVE_FILE)
+    TYPE_PROJ : Projection
+        The projection function to use
+    LOSS_LAMBDA : float, optional
+        Weight of the reconstruction loss in the total loss, by default 0.001
+    lr_scheduler : LRScheduler, optional
+        Learning rate scheduler (NOT IMPLEMENTED), by default None
+    N_EPOCHS : int, optional
+        Number of epochs for training, by default 30
+    run_model : str, optional
+        The type of model run ("No_Proj" or "MaskGrad" or "ProjectionLastEpoch"), by default "No_Proj"
+    DO_PROJ_MIDDLE : bool or list if run_model=="MaskGrad", optional
+        Whether to project the middle layer, by default False
+    DO_PROJ_DECODER : bool, optional
+        Whether to project the decoder layers, by default True
+    ETA : int, optional
+        The projection radius, by default 100
+    ETA_STAR : int, optional
+        The projection radius for proj_nuclear, by default 100
+    TOL : float, optional
+        The tolerance for the proj_l1inf algorithm, by default 1e-5
+    AXIS : int, optional
+        The projection axis, by default 0
+
+    Returns
+    -------
+    data_encoder, data_decoded, epoch_loss, best_test, net
     """
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     epoch_loss, epoch_acc, epoch_reconstruction, epoch_classification, train_time = (
         [],
         [],
@@ -987,9 +1013,9 @@ def RunAutoEncoder(
         epoch_val_classification,
     ) = ([], [], [], [])
     best_test = 0
-    for e in range(N_EPOCHS):
+    for epoch_idx in range(N_EPOCHS):
         t1 = time.perf_counter()
-        print("EPOCH:", e)
+        print("EPOCH:", epoch_idx)
         running_loss, running_accuracy = 0, 0
         running_classification, running_reconstruction = 0, 0
         net.train()
@@ -1005,10 +1031,14 @@ def RunAutoEncoder(
 
             # Compute the loss
             loss_classification = criterion_classification(encoder_out, labels.long())
-            if type(criterion) == torch.nn.modules.loss.KLDivLoss:
-                loss_reconstruction = LOSS_LAMBDA * criterion(x.log(), decoder_out)
+            if type(criterion_reconstruction) == torch.nn.modules.loss.KLDivLoss:
+                loss_reconstruction = LOSS_LAMBDA * criterion_reconstruction(
+                    x.log(), decoder_out
+                )
             else:
-                loss_reconstruction = LOSS_LAMBDA * criterion(decoder_out, x)
+                loss_reconstruction = LOSS_LAMBDA * criterion_reconstruction(
+                    decoder_out, x
+                )
             loss = loss_classification + loss_reconstruction
 
             optimizer.zero_grad()
@@ -1018,7 +1048,7 @@ def RunAutoEncoder(
             if run_model == "MaskGrad":
                 for index, param in enumerate(list(net.parameters())):
                     if index < len(list(net.parameters())) / 2 - 2 and index % 2 == 0:
-                        param.grad[DO_PROJ_middle[int(index / 2)]] = 0
+                        param.grad[DO_PROJ_MIDDLE[int(index / 2)]] = 0
             optimizer.step()
 
             with torch.no_grad():
@@ -1027,7 +1057,7 @@ def RunAutoEncoder(
                 running_classification += loss_classification.item()
                 running_accuracy += (encoder_out.max(1)[1] == labels).sum().item()
 
-            if e == N_EPOCHS - 1:
+            if epoch_idx == N_EPOCHS - 1:
                 #                labels = encoder_out.max(1)[1].float()
                 if i == 0:
                     data_decoded = torch.cat((decoder_out, labels.view(-1, 1)), dim=1)
@@ -1055,13 +1085,13 @@ def RunAutoEncoder(
         epoch_acc.append(running_accuracy / train_len)
 
         # Do projection at last epoch (GRADIENT_MASK)
-        if run_model == "ProjectionLastEpoch" and e == (N_EPOCHS - 1):
+        if run_model == "ProjectionLastEpoch" and epoch_idx == (N_EPOCHS - 1):
             net_parameters = list(net.parameters())
             for index, param in enumerate(net_parameters):
                 is_middle = index == len(net_parameters) / 2 - 2
                 is_decoder_layer = index > len(net_parameters) / 2
                 if (
-                    DO_PROJ_middle == False and is_middle
+                    DO_PROJ_MIDDLE == False and is_middle
                 ):  # Do no projection at middle layer
                     print(
                         f"Did not project layer {index} ({param.shape}) because: middle"
@@ -1095,10 +1125,14 @@ def RunAutoEncoder(
                 loss_classification = criterion_classification(
                     encoder_out, labels.long()
                 )
-                if type(criterion) == torch.nn.modules.loss.KLDivLoss:
-                    loss_reconstruction = LOSS_LAMBDA * criterion(x.log(), decoder_out)
+                if type(criterion_reconstruction) == torch.nn.modules.loss.KLDivLoss:
+                    loss_reconstruction = LOSS_LAMBDA * criterion_reconstruction(
+                        x.log(), decoder_out
+                    )
                 else:
-                    loss_reconstruction = LOSS_LAMBDA * criterion(decoder_out, x)
+                    loss_reconstruction = LOSS_LAMBDA * criterion_reconstruction(
+                        decoder_out, x
+                    )
                 loss = loss_classification + loss_reconstruction
                 running_loss += loss.item()
                 running_reconstruction += loss_reconstruction.item()
@@ -1115,7 +1149,7 @@ def RunAutoEncoder(
             running_classification / test_len,
         )
         if running_accuracy > best_test:
-            best_net_it = e
+            best_net_it = epoch_idx
             best_test = running_accuracy
             torch.save(net.state_dict(), str(outputPath) + "best_net")
         epoch_val_loss.append(running_loss / test_len)
@@ -1123,27 +1157,8 @@ def RunAutoEncoder(
         epoch_val_classification.append(running_classification / test_len)
         epoch_val_acc.append(running_accuracy / test_len)
 
-    print("Epoch du best net = ", best_net_it)
-    if SAVE_FILE and str(run_model) != "ProjectionLastEpoch":
-        # Save encoder data
-        Lung_encoder = data_encoder.cpu().detach().numpy()
-        colunms = [x for x in range(Lung_encoder.shape[1] - 1)] + ["label"]
-        res = pd.DataFrame(Lung_encoder, columns=colunms)
-        # res.to_csv('{}encoder_tiro_{}.csv'.format(outputPath, str(run_model)),sep=';')
-        # Save decoder data
-        Lung_decoded = data_decoded.cpu().detach().numpy()
-        Label = ["Label"] + list(Lung_decoded[:, -1].astype(int) + 1)
-        Name = ["Name"] + [x + 2 for x in range(train_len)]
-        Label = np.vstack((np.array(Name), np.array(Label)))
-        Lung = np.delete(Lung_decoded, -1, axis=1)
-        Lung = np.hstack((feature_name.reshape(-1, 1), Lung.T))
-        Lung = np.vstack((Label, Lung))
-        res = pd.DataFrame(Lung)
-        # res.to_csv('{}decoded_{}.csv'.format(outputPath, str(run_model)),sep=';',index=0, header=0)
-        print("-----------------------")
-        print("Saved file to ", str(outputPath))
-        print("-----------------------")
-    # Plot
+    print("Best net epoch = ", best_net_it)
+
     if str(run_model) != "ProjectionLastEpoch":
         # plt.figure()
         # plt.plot( epoch_acc )
@@ -1446,7 +1461,6 @@ def Projection(
         W_new: tensor - W after projection 
     """
 
-    # global TYPE_PROJ, ETA, ETA_STAR, AXIS, device
     if TYPE_PROJ == "No_proj":
         W_new = W
     if (
@@ -1916,7 +1930,7 @@ def show_img(x_list, xd_list, file_name):
         titile: list - list of figure title.
       
     Returns:
-        non
+        None
     """
 
     # En valeur absolue
@@ -1930,13 +1944,15 @@ def show_img(x_list, xd_list, file_name):
 
     x = x[:, :-1].T
 
+    x = (x - x.min()) / (x.max() - x.min())
+
     plt.figure()
     plt.plot()
-    plt.title(file_name[:-4] + " without ReLU sorted")
+    plt.title(file_name[:-4] + " normalized and sorted")
     im = plt.imshow(
         x,
         cmap=plt.cm.jet,
-        norm=mpl.colors.Normalize(vmin=x.min(), vmax=x.max()),
+        norm=mpl.colors.Normalize(vmin=0, vmax=1),
         interpolation="nearest",
         aspect="auto",
     )

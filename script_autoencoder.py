@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Note from CyprienGille : This code is an amalgamation of the work of several people, and needs a complete overhaul
+for better factorization and readability. I will delete this comment when this is done.
+
 Copyright   I3S CNRS UCA 
 
 This code is an implementation of the statistical evaluation of the autoencoder described in the article :
@@ -27,10 +30,10 @@ David Chardin, Cyprien Gille, Thierry Pourcher and Michel Barlaud :
 
 Parameters : 
     
-    - Seed (line 80)
-    - Database (line 106) (variable file_name)
-    - Projection (line 134)
-    - Constraint ETA (line 81)
+    - Seed
+    - Database (variable file_name)
+    - Projection
+    - Constraint ETA
     
 Results_stat
     -Accuracy, F1 score (+other metrics)
@@ -39,55 +42,43 @@ Results_stat
 """
 #%%
 import os
-import sys
 
-if "../functions/" not in sys.path:
-    sys.path.append("../functions/")
-
-
+import time
 import matplotlib.pyplot as plt
 import pandas as pd
-import torch
 import numpy as np
+import seaborn as sns
+import torch
 from torch import nn
-import time
 from sklearn import metrics
+from sklearn.metrics import precision_recall_fscore_support
 
-# lib in '../functions/'
 import functions.functions_torch as ft
 import functions.functions_network_pytorch as fnp
-from sklearn.metrics import precision_recall_fscore_support
-import seaborn as sns
 
 
-#################################
+#%%
 
 if __name__ == "__main__":
 
-    # # ------------ Parameters ---------
-
-    ####### Set of parameters : #######
-    # Lung : ETA = 200
-    # Brain : ETA = 50
-    # Breast : ETA = 100 or 80
+    ######## Parameters ########
 
     # Set seed
-    Seed = [4, 5, 6]
+    SEEDS = [4, 5, 6]
 
-    # Set device (Gpu or cpu)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # Set device (GPU or CPU)
+    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    nfold = 4
-    N_EPOCHS = 30
-    N_EPOCHS_MASKGRAD = 30  # number of epochs for training masked gradient
+    nfolds = 4  # Number of folds for the cross-validation process
+    N_EPOCHS = 30  # Number of epochs for the first descent
+    N_EPOCHS_MASKGRAD = 30  # Number of epochs for training masked gradient
     LR = 0.0005  # Learning rate
     BATCH_SIZE = 8  # Optimize the trade off between accuracy and computational time
-    LOSS_LAMBDA = 0.001  # Total loss =λ * loss_autoencoder +  loss_classification
-    bW = 0.5  # Kernel size for distribution plots
+    LOSS_LAMBDA = 0.001  # Total loss = λ * loss_reconstruction +  loss_classification
 
-    # Scaling
+    # unit scaling of the input data
     doScale = True
-    # log transform
+    # log transform of the input data
     doLog = True
 
     # loss function for reconstruction
@@ -99,15 +90,18 @@ if __name__ == "__main__":
     class_weights = [1, 1]
     # Loss function
     criterion_classification = nn.CrossEntropyLoss(
-        reduction="sum", weight=torch.Tensor(class_weights).to(device)
+        reduction="sum", weight=torch.Tensor(class_weights).to(DEVICE)
     )
 
-    TIRO_FORMAT = True
+    ## Dataset choice
     # file_name = "LUNG.csv"
     # file_name = "BRAIN_MID.csv"
-    file_name = "GC_Brest_D_MB.csv"
+    file_name = "GC_Breast_D_MB.csv"
 
-    # Choose Net
+    # Samples along the columns, features along the lines of the input csv
+    TIRO_FORMAT = True
+
+    ## Choose Architecture
     # net_name = 'LeNet'
     net_name = "netBio"
     n_hidden = 96  # amount of neurons on netbio's hidden layer
@@ -117,27 +111,24 @@ if __name__ == "__main__":
     Do_tSNE = True
     run_model = "No_proj"  # default model run
     # Do projection at the middle layer or not
-    DO_PROJ_middle = False
+    DO_PROJ_MIDDLE = False
     # Do projection on the decoder part or not
     DO_PROJ_DECODER = True
 
-    # Do projection (True)  or not (False)
     ETA = 100  # Controls feature selection (projection) (L1, L11, L21)
     RHO = 0.6  # Controls feature selection for l1inf
-    GRADIENT_MASK = True
+    GRADIENT_MASK = True  # Whether to do a second descent
     if GRADIENT_MASK:
         run_model = "ProjectionLastEpoch"
 
-    # Choose projection function
-
+    ## Choose projection function
     if not GRADIENT_MASK:
         TYPE_PROJ = "No_proj"
         TYPE_PROJ_NAME = "No_proj"
     else:
         # TYPE_PROJ = ft.proj_l1ball    # projection l1
         TYPE_PROJ = ft.proj_l11ball  # original projection l11 (col-wise zeros)
-        # TYPE_PROJ = ft.proj_l21ball  # projection l21
-
+        # TYPE_PROJ = ft.proj_l21ball   # projection l21
         # TYPE_PROJ = ft.proj_l1infball  # projection l1,inf
 
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
@@ -145,11 +136,15 @@ if __name__ == "__main__":
     AXIS = 1  #  1 for columns (features), 0 for rows (neurons)
     TOL = 1e-4  # error margin for the L1inf algorithm
 
-    # Top genes params
+    bW = 0.5  # Kernel size for distribution plots
+
     DoTopGenes = True  # Compute feature rankings
 
     # Save Results or not
     SAVE_FILE = True
+
+    ######## Main routine ########
+
     # Output Path
     outputPath = (
         "results_stat"
@@ -161,50 +156,49 @@ if __name__ == "__main__":
     if not os.path.exists(outputPath):  # make the directory if it does not exist
         os.makedirs(outputPath)
 
-    # ------------ Main routine ---------
     # Load data
-    X, Y, feature_name, label_name, patient_name, LFC_Rank = ft.ReadData(
+    X, Y, feature_names, label_name, patient_name, LFC_Rank = ft.ReadData(
         file_name, TIRO_FORMAT=TIRO_FORMAT, doScale=doScale, doLog=doLog
     )
 
-    feature_len = len(feature_name)
+    feature_len = len(feature_names)
     class_len = len(label_name)
     print(f"Number of features: {feature_len}, Number of classes: {class_len}")
 
     # matrices to store accuracies
-    accuracy_train = np.zeros((nfold * len(Seed), class_len + 1))
-    accuracy_test = np.zeros((nfold * len(Seed), class_len + 1))
+    accuracy_train = np.zeros((nfolds * len(SEEDS), class_len + 1))
+    accuracy_test = np.zeros((nfolds * len(SEEDS), class_len + 1))
     # matrices to store metrics
-    data_train = np.zeros((nfold * len(Seed), 7))
-    data_test = np.zeros((nfold * len(Seed), 7))
+    data_train = np.zeros((nfolds * len(SEEDS), 7))
+    data_test = np.zeros((nfolds * len(SEEDS), 7))
     correct_prediction = []
-    s = 0
-    for SEED in Seed:
+    seed_idx = 0
+    for seed in SEEDS:
 
-        np.random.seed(SEED)
-        torch.manual_seed(SEED)
-        torch.cuda.manual_seed(SEED)
-        for i in range(nfold):
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        for fold_idx in range(nfolds):
 
             train_dl, test_dl, train_len, test_len, Ytest = ft.CrossVal(
-                X, Y, patient_name, BATCH_SIZE, i, SEED
+                X, Y, patient_name, BATCH_SIZE, fold_idx, seed
             )
             print(
                 "Len of train set: {}, Len of test set:: {}".format(train_len, test_len)
             )
-            print("----------- Début iteration ", i, "----------------")
+            print("----------- Start fold ", fold_idx, "----------------")
             # Define the SEED to fix the initial parameters
-            np.random.seed(SEED)
-            torch.manual_seed(SEED)
-            torch.cuda.manual_seed(SEED)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
 
             # run AutoEncoder
             if net_name == "LeNet":
                 net = ft.LeNet_300_100(n_inputs=feature_len, n_outputs=class_len).to(
-                    device
+                    DEVICE
                 )  # LeNet
             if net_name == "netBio":
-                net = ft.netBio(feature_len, class_len, n_hidden).to(device)  # netBio
+                net = ft.netBio(feature_len, class_len, n_hidden).to(DEVICE)  # netBio
 
             weights_entry, spasity_w_entry = fnp.weights_and_sparsity(net)
 
@@ -214,25 +208,25 @@ if __name__ == "__main__":
                     ETA = RHO
 
             optimizer = torch.optim.Adam(net.parameters(), lr=LR)
-            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 150, gamma=0.1)
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(
+                optimizer, step_size=150, gamma=0.1
+            )
             data_encoder, data_decoded, epoch_loss, best_test, net = ft.RunAutoEncoder(
                 net,
                 criterion_reconstruction,
-                optimizer,
-                lr_scheduler,
+                criterion_classification,
                 train_dl,
                 train_len,
                 test_dl,
                 test_len,
-                N_EPOCHS,
+                optimizer,
                 outputPath,
-                SAVE_FILE,
-                DO_PROJ_middle,
-                run_model,
-                criterion_classification,
-                LOSS_LAMBDA,
-                feature_name,
                 TYPE_PROJ,
+                LOSS_LAMBDA,
+                lr_scheduler,
+                N_EPOCHS,
+                run_model,
+                DO_PROJ_MIDDLE,
                 DO_PROJ_DECODER,
                 ETA,
                 AXIS=AXIS,
@@ -253,20 +247,20 @@ if __name__ == "__main__":
 
                 # Get initial network and set zeros
                 # Recall the SEED to get the initial parameters
-                np.random.seed(SEED)
-                torch.manual_seed(SEED)
-                torch.cuda.manual_seed(SEED)
+                np.random.seed(seed)
+                torch.manual_seed(seed)
+                torch.cuda.manual_seed(seed)
 
                 # run AutoEncoder
                 if net_name == "LeNet":
                     net = ft.LeNet_300_100(
                         n_inputs=feature_len, n_outputs=class_len
                     ).to(
-                        device
+                        DEVICE
                     )  # LeNet
                 if net_name == "netBio":
                     net = ft.netBio(feature_len, class_len, n_hidden).to(
-                        device
+                        DEVICE
                     )  # netBio
                 optimizer = torch.optim.Adam(net.parameters(), lr=LR)
                 lr_scheduler = torch.optim.lr_scheduler.StepLR(
@@ -287,21 +281,19 @@ if __name__ == "__main__":
                 ) = ft.RunAutoEncoder(
                     net,
                     criterion_reconstruction,
-                    optimizer,
-                    lr_scheduler,
+                    criterion_classification,
                     train_dl,
                     train_len,
                     test_dl,
                     test_len,
-                    N_EPOCHS_MASKGRAD,
+                    optimizer,
                     outputPath,
-                    SAVE_FILE,
-                    zero_list,
-                    run_model,
-                    criterion_classification,
-                    LOSS_LAMBDA,
-                    feature_name,
                     TYPE_PROJ,
+                    LOSS_LAMBDA,
+                    lr_scheduler,
+                    N_EPOCHS_MASKGRAD,
+                    run_model,
+                    zero_list,
                     DO_PROJ_DECODER,
                     ETA,
                     AXIS=AXIS,
@@ -327,15 +319,15 @@ if __name__ == "__main__":
                 test_dl,
                 best_test,
                 outputPath,
-                i,
+                fold_idx,
                 class_len,
                 net,
-                feature_name,
+                feature_names,
                 test_len,
             )
 
-            if SEED == Seed[-1]:
-                if i == 0:
+            if seed == SEEDS[-1]:
+                if fold_idx == 0:
                     Ytruef = Ytrue
                     Ypredf = Ypred
                     LP_test = data_encoder_test.detach().cpu().numpy()
@@ -346,52 +338,52 @@ if __name__ == "__main__":
                         (LP_test, data_encoder_test.detach().cpu().numpy())
                     )
 
-            accuracy_train[s * 4 + i] = class_train
-            accuracy_test[s * 4 + i] = class_test
+            accuracy_train[seed_idx * 4 + fold_idx] = class_train
+            accuracy_test[seed_idx * 4 + fold_idx] = class_test
             X_encoder = data_encoder[:, :-1]
             labels_encoder = data_encoder[:, -1]
             data_encoder_test = data_encoder_test.cpu().detach()
 
-            data_train[s * 4 + i, 0] = metrics.silhouette_score(
+            data_train[seed_idx * 4 + fold_idx, 0] = metrics.silhouette_score(
                 X_encoder, labels_encoder, metric="euclidean"
             )
 
             X_encodertest = data_encoder_test[:, :-1]
             labels_encodertest = data_encoder_test[:, -1]
-            data_test[s * 4 + i, 0] = metrics.silhouette_score(
+            data_test[seed_idx * 4 + fold_idx, 0] = metrics.silhouette_score(
                 X_encodertest, labels_encodertest, metric="euclidean"
             )
             # ARI score
 
-            data_train[s * 4 + i, 1] = metrics.adjusted_rand_score(
+            data_train[seed_idx * 4 + fold_idx, 1] = metrics.adjusted_rand_score(
                 labels_encoder, labelpredict
             )
-            data_test[s * 4 + i, 1] = metrics.adjusted_rand_score(
+            data_test[seed_idx * 4 + fold_idx, 1] = metrics.adjusted_rand_score(
                 Ytest, data_encoder_test[:, :-1].max(1)[1].detach().cpu().numpy()
             )
 
             # AMI Score
-            data_train[s * 4 + i, 2] = metrics.adjusted_mutual_info_score(
+            data_train[seed_idx * 4 + fold_idx, 2] = metrics.adjusted_mutual_info_score(
                 labels_encoder, labelpredict
             )
-            data_test[s * 4 + i, 2] = metrics.adjusted_mutual_info_score(
+            data_test[seed_idx * 4 + fold_idx, 2] = metrics.adjusted_mutual_info_score(
                 Ytest, data_encoder_test[:, :-1].max(1)[1].detach().cpu().numpy()
             )
 
             # UAC Score
             if class_len == 2:
-                data_train[s * 4 + i, 3] = metrics.roc_auc_score(
+                data_train[seed_idx * 4 + fold_idx, 3] = metrics.roc_auc_score(
                     labels_encoder, labelpredict
                 )
-                data_test[s * 4 + i, 3] = metrics.roc_auc_score(
+                data_test[seed_idx * 4 + fold_idx, 3] = metrics.roc_auc_score(
                     Ytest, data_encoder_test[:, :-1].max(1)[1].detach().cpu().numpy()
                 )
 
             # F1 precision recal
-            data_train[s * 4 + i, 4:] = precision_recall_fscore_support(
+            data_train[seed_idx * 4 + fold_idx, 4:] = precision_recall_fscore_support(
                 labels_encoder, labelpredict, average="macro"
             )[:-1]
-            data_test[s * 4 + i, 4:] = precision_recall_fscore_support(
+            data_test[seed_idx * 4 + fold_idx, 4:] = precision_recall_fscore_support(
                 Ytest, data_encoder_test[:, :-1].max(1)[1].numpy(), average="macro"
             )[:-1]
 
@@ -408,17 +400,17 @@ if __name__ == "__main__":
 
             if DoTopGenes:
                 tps1 = time.perf_counter()
-                if i == 0:  # first fold, never did topgenes yet
+                if fold_idx == 0:  # first fold, never did topgenes yet
                     print("Running topGenes...")
                     df_topGenes = ft.topGenes(
                         X,
                         Y,
-                        feature_name,
+                        feature_names,
                         class_len,
                         feature_len,
                         method,
                         nb_samples,
-                        device,
+                        DEVICE,
                         net,
                     )
                     df_topGenes.index = df_topGenes.iloc[:, 0]
@@ -429,12 +421,12 @@ if __name__ == "__main__":
                     df_topGenes = ft.topGenes(
                         X,
                         Y,
-                        feature_name,
+                        feature_names,
                         class_len,
                         feature_len,
                         method,
                         nb_samples,
-                        device,
+                        DEVICE,
                         net,
                     )
                     print("topGenes finished")
@@ -458,7 +450,7 @@ if __name__ == "__main__":
                 tps2 = time.perf_counter()
                 print("execution time topGenes  : ", tps2 - tps1)
 
-        if SEED == Seed[0]:
+        if seed == SEEDS[0]:
             df_softmax = softmax
             df_softmax.index = df_softmax["Name"]
             # softmax.to_csv('{}softmax.csv'.format(outputPath),sep=';',index=0)
@@ -512,7 +504,7 @@ if __name__ == "__main__":
                 index=0,
             )
 
-            if SEED == Seed[0]:
+            if seed == SEEDS[0]:
                 df_topGenes_mean = df_topGenes.iloc[:, 0:2]
                 df_topGenes_mean.index = df_topGenes.iloc[:, 0]
             else:
@@ -534,11 +526,11 @@ if __name__ == "__main__":
                 sep=";",
             )
 
-        s += 1
+        seed_idx += 1
 
         # accuracies
     df_accTrain, df_acctest = ft.packClassResult(
-        accuracy_train, accuracy_test, nfold * len(Seed), label_name
+        accuracy_train, accuracy_test, nfolds * len(SEEDS), label_name
     )
     print("\nAccuracy Train")
     print(df_accTrain)
@@ -547,7 +539,7 @@ if __name__ == "__main__":
 
     # metrics
     df_metricsTrain, df_metricsTest = ft.packMetricsResult(
-        data_train, data_test, nfold * len(Seed)
+        data_train, data_test, nfolds * len(SEEDS)
     )
 
     # separation of the metrics in different dataframes
@@ -586,7 +578,7 @@ if __name__ == "__main__":
         df_mean = df_val.mean(axis=1).reshape(-1, 1)
         df_std = df_val.std(axis=1).reshape(-1, 1)
         df_meanstd = df_std / df_mean
-        col_seed = ["Seed " + str(i) for i in Seed]
+        col_seed = ["Seed " + str(i) for i in SEEDS]
         df = pd.DataFrame(
             np.concatenate((df.values[:, :], df_mean, df_std, df_meanstd), axis=1),
             columns=["Features"] + col_seed + ["Mean", "Std", "Mstd"],
@@ -642,9 +634,9 @@ if __name__ == "__main__":
     weights_decoder, spasity_w_decoder = fnp.weights_and_sparsity(net.decoder)
     mat_in = net.state_dict()["encoder.0.weight"]
 
-    mat_col_sparsity = ft.sparsity_col(mat_in, device=device)
+    mat_col_sparsity = ft.sparsity_col(mat_in, device=DEVICE)
     print(" Colonnes sparsity sur la matrice d'entrée: \n", mat_col_sparsity)
-    mat_in_sparsity = ft.sparsity_line(mat_in, device=device)
+    mat_in_sparsity = ft.sparsity_line(mat_in, device=DEVICE)
     print(" ligne sparsity sur la matrice d'entrée: \n", mat_in_sparsity)
     layer_list = [x for x in weights.values()]
     layer_list_decoder = [x for x in weights_decoder.values()]
