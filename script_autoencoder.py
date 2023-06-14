@@ -96,8 +96,8 @@ if __name__ == "__main__":
     ## Dataset choice
     # file_name = "LUNG.csv"
     # file_name = "BRAIN_MID.csv"
-    # file_name = "GC_Breast_D_MB.csv"
-    file_name = "Th12F_meanFill.csv"
+    file_name = "GC_Breast_D_MB.csv"
+    # file_name = "Th12F_meanFill.csv"
 
     ## Choose Architecture
     # net_name = 'LeNet'
@@ -603,12 +603,20 @@ if __name__ == "__main__":
         distrib = softmax[col].where(softmax["Labels"] == lab).dropna()
         if lab == 0:
             sns.kdeplot(
-                1 - distrib, bw=bW, shade=True, color="tab:blue", label="Proba class 0",
+                1 - distrib,
+                bw_method=bW,
+                shade=True,
+                color="tab:blue",
+                label="Proba class 0",
             )
             # sns.kdeplot(1 - distrib, bw=0.1, fill=True, shade="True")
         else:
             sns.kdeplot(
-                distrib, bw=bW, shade=True, color="tab:orange", label="Proba class 1"
+                distrib,
+                bw_method=bW,
+                shade=True,
+                color="tab:orange",
+                label="Proba class 1",
             )
             # sns.kdeplot(distrib, bw=0.1, fill=True, shade="True")
 

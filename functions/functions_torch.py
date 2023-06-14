@@ -791,9 +791,9 @@ def RunAutoEncoder(
         print(
             "Total loss:",
             running_loss / float(train_len),
-            "loss_reconstruction: ",
+            "loss_recon: ",
             running_reconstruction / train_len,
-            "loss_classification: ",
+            "loss_classif: ",
             running_classification / train_len,
         )
         epoch_loss.append(running_loss / train_len)
@@ -858,11 +858,11 @@ def RunAutoEncoder(
         print(
             "test accuracy : ",
             running_accuracy / test_len,
-            "Total loss:",
+            "Total test loss:",
             running_loss / float(test_len),
-            "loss_reconstruction: ",
+            "test loss_recon: ",
             running_reconstruction / test_len,
-            "loss_classification: ",
+            "test loss_classif: ",
             running_classification / test_len,
         )
         if running_accuracy > best_test:
