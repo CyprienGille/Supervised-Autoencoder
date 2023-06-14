@@ -1504,74 +1504,45 @@ from sklearn.preprocessing import scale as scale
 
 
 def ReadData(
-    file_name, model="", TIRO_FORMAT=True, doScale=True, doLog=True,
+    file_name, doScale=True, doLog=True,
 ):
-    if file_name.split(".")[-1] == "csv":
-        if model == "autoencoder":
-            data_pd = pd.read_csv(
-                str(file_name),
-                delimiter=";",
-                decimal=",",
-                header=0,
-                encoding="ISO-8859-1",
-            )
-            X = (data_pd.iloc[1:, 1:].values.astype(float)).T
-            Y = data_pd.iloc[0, 1:].values.astype(float).astype(int)
-            feature_name = data_pd["Name"].values.astype(str)[1:]
-            label_name = np.unique(Y)
-        elif not TIRO_FORMAT:
-            data_pd = pd.read_csv(
-                "data/" + str(file_name), delimiter=",", header=None, dtype="unicode"
-            )
-            index_root = data_pd[data_pd.iloc[:, -1] == "root"].index.tolist()
-            data = data_pd.drop(index_root).values
-            X = data[1:, :-1].astype(float)
-            Y = data[1:, -1]
-            feature_name = data[0, :-1]
-            patient_name = data_pd.columns[1:]
-            label_name = np.unique(data[1:, -1])
-            X1 = X[np.where(Y == label_name[0])[0], :]
-            X2 = X[np.where(Y == label_name[1])[0], :]
 
-            difference = np.mean(X1, axis=0) - np.mean(X2, axis=0)
-            # Do standardization
-            X = X - np.mean(X, axis=0)
-            # X = scale(X,axis=0)
+    data_pd = pd.read_csv(
+        "data/" + str(file_name),
+        delimiter=";",
+        decimal=",",
+        header=0,
+        encoding="ISO-8859-1",
+    )
+    X = (data_pd.iloc[1:, 1:].values.astype(float)).T
+    Y = data_pd.iloc[0, 1:].values.astype(float).astype(np.int64)
+    col = data_pd.columns.to_list()
+    if col[0] != "Name":
+        col[0] = "Name"
+    data_pd.columns = col
+    feature_name = data_pd["Name"].values.astype(str)[1:]
+    label_name = np.unique(Y)
+    patient_name = data_pd.columns[1:]
+    # Do standardization
+    if doLog:
+        X = np.log(abs(X + 1))  # Transformation
 
-        elif TIRO_FORMAT:
-            data_pd = pd.read_csv(
-                "data/" + str(file_name),
-                delimiter=";",
-                decimal=",",
-                header=0,
-                encoding="ISO-8859-1",
-            )
-            X = (data_pd.iloc[1:, 1:].values.astype(float)).T
-            Y = data_pd.iloc[0, 1:].values.astype(float).astype(np.int64)
-            col = data_pd.columns.to_list()
-            if col[0] != "Name":
-                col[0] = "Name"
-            data_pd.columns = col
-            feature_name = data_pd["Name"].values.astype(str)[1:]
-            label_name = np.unique(Y)
-            patient_name = data_pd.columns[1:]
-            # Do standardization
-            if doLog:
-                X = np.log(abs(X + 1))  # Transformation
+    X1 = X[np.where(Y == label_name[0])[0], :]
+    X2 = X[np.where(Y == label_name[1])[0], :]
 
-            X1 = X[np.where(Y == label_name[0])[0], :]
-            X2 = X[np.where(Y == label_name[1])[0], :]
+    difference = np.mean(X1, axis=0) - np.mean(X2, axis=0)
 
-            difference = np.mean(X1, axis=0) - np.mean(X2, axis=0)
+    X = X - np.mean(X, axis=0)
+    if doScale:
+        X = scale(X, axis=0)  # Standardization along rows
 
-            X = X - np.mean(X, axis=0)
-            if doScale:
-                X = scale(X, axis=0)  # Standardization along rows
-        for index, label in enumerate(
-            label_name
-        ):  # convert string labels to numero (0,1,2....)
-            Y = np.where(Y == label, index, Y)
-        Y = Y.astype(np.int64)
+    for index, label in enumerate(
+        label_name
+    ):  # convert string labels to number (0,1,2....)
+        Y = np.where(Y == label, index, Y)
+    Y = Y.astype(np.int64)
+    if not Y.all():
+        Y += 1  # 0,1,2,3.... labels -> 1,2,3,4... labels
 
     return X, Y, feature_name, label_name, patient_name
 

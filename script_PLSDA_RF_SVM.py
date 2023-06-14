@@ -4,16 +4,13 @@ This code is an implementation of the other methods used for comparison in the a
 for diagnosis and prognosis in clinical metabolomic studies.
 """
 #%%
-import sys
-
-if "../functions/" not in sys.path:
-    sys.path.append("../functions/")
 import os
 
-import functions.functions_compare as fc
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import scale
+
+import functions.functions_compare as fc
 
 
 if __name__ == "__main__":

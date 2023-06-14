@@ -96,10 +96,8 @@ if __name__ == "__main__":
     ## Dataset choice
     # file_name = "LUNG.csv"
     # file_name = "BRAIN_MID.csv"
-    file_name = "GC_Breast_D_MB.csv"
-
-    # Samples along the columns, features along the lines of the input csv
-    TIRO_FORMAT = True
+    # file_name = "GC_Breast_D_MB.csv"
+    file_name = "Th12F_meanFill.csv"
 
     ## Choose Architecture
     # net_name = 'LeNet'
@@ -158,7 +156,7 @@ if __name__ == "__main__":
 
     # Load data
     X, Y, feature_names, label_name, patient_name = ft.ReadData(
-        file_name, TIRO_FORMAT=TIRO_FORMAT, doScale=doScale, doLog=doLog
+        file_name, doScale=doScale, doLog=doLog
     )
 
     feature_len = len(feature_names)
