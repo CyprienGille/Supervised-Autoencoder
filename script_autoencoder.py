@@ -344,6 +344,7 @@ if __name__ == "__main__":
             labels_encoder = data_encoder[:, -1]
             data_encoder_test = data_encoder_test.cpu().detach()
 
+            # SIL score
             data_train[seed_idx * 4 + fold_idx, 0] = metrics.silhouette_score(
                 X_encoder, labels_encoder, metric="euclidean"
             )
@@ -370,7 +371,7 @@ if __name__ == "__main__":
                 Ytest, data_encoder_test[:, :-1].max(1)[1].detach().cpu().numpy()
             )
 
-            # UAC Score
+            # AUC Score
             if class_len == 2:
                 data_train[seed_idx * 4 + fold_idx, 3] = metrics.roc_auc_score(
                     labels_encoder, labelpredict
@@ -379,7 +380,7 @@ if __name__ == "__main__":
                     Ytest, data_encoder_test[:, :-1].max(1)[1].detach().cpu().numpy()
                 )
 
-            # F1 precision recal
+            # F1 precision recall
             data_train[seed_idx * 4 + fold_idx, 4:] = precision_recall_fscore_support(
                 labels_encoder, labelpredict, average="macro"
             )[:-1]
@@ -387,7 +388,7 @@ if __name__ == "__main__":
                 Ytest, data_encoder_test[:, :-1].max(1)[1].numpy(), average="macro"
             )[:-1]
 
-            # Recupération des labels corects
+            # Correct labels storage
             correct_prediction += correct_pred
 
             # Get Top Genes of each class
@@ -448,7 +449,7 @@ if __name__ == "__main__":
                     sep=";",
                 )
                 tps2 = time.perf_counter()
-                print("execution time topGenes  : ", tps2 - tps1)
+                print("Execution time topGenes  : ", tps2 - tps1)
 
         if seed == SEEDS[0]:
             df_softmax = softmax
@@ -528,7 +529,7 @@ if __name__ == "__main__":
 
         seed_idx += 1
 
-        # accuracies
+    # accuracies
     df_accTrain, df_acctest = ft.packClassResult(
         accuracy_train, accuracy_test, nfolds * len(SEEDS), label_name
     )
@@ -557,7 +558,7 @@ if __name__ == "__main__":
     # print(df_metricsTest_clustering)
     print(df_metricsTest_classif)
 
-    # Reconstruction by using the centers in laten space and datas after interpellation
+    # Reconstruction by using the centers in latent space and datas after interpolation
     center_mean, center_distance = ft.Reconstruction(0.2, data_encoder, net, class_len)
 
     # Do pca,tSNE for encoder data
@@ -635,9 +636,9 @@ if __name__ == "__main__":
     mat_in = net.state_dict()["encoder.0.weight"]
 
     mat_col_sparsity = ft.sparsity_col(mat_in, device=DEVICE)
-    print(" Colonnes sparsity sur la matrice d'entrée: \n", mat_col_sparsity)
+    print(" Column sparsity of input matrix: \n", mat_col_sparsity)
     mat_in_sparsity = ft.sparsity_line(mat_in, device=DEVICE)
-    print(" ligne sparsity sur la matrice d'entrée: \n", mat_in_sparsity)
+    print("Line sparsity of input matrix: \n", mat_in_sparsity)
     layer_list = [x for x in weights.values()]
     layer_list_decoder = [x for x in weights_decoder.values()]
     titile_list = [x for x in spasity_w.keys()]

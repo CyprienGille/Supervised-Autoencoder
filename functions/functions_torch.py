@@ -1175,7 +1175,7 @@ def RunAutoEncoder(
 
 def selectf(x, feature_name):
     x = x.cpu()
-    n, d = x.shape
+    _, d = x.shape
     mat = []
     for i in range(d):
         mat.append([feature_name[i] + "", np.linalg.norm(x[:, i])])
@@ -1216,9 +1216,8 @@ def runBestNet(
     correct_pred = []
     Y_predit = []
     Y_true = []
-    L = (
-        []
-    )  # [np.array(["Name", "Labels"] + ["Proba class "+ str(i) for i in range(class_len)])]
+    index_pred_probs = []
+    # [np.array(["Name", "Labels"] + ["Proba class "+ str(i) for i in range(class_len)])]
     best_value = np.zeros((1, 1))
     net.load_state_dict(torch.load(str(outputPath) + "best_net"))
     net.eval()
@@ -1240,7 +1239,7 @@ def runBestNet(
                 else:
                     class_train_correct[label] += int(c[i].item())
                 class_train_total[label] += 1
-    First = True
+    first = True
     for i, batch in enumerate(test_dl):
         with torch.no_grad():
             x = batch[0]
@@ -1250,10 +1249,10 @@ def runBestNet(
                 x = x.cuda()
                 labels = labels.cuda()
             encoder_out, decoder_out = net(x)
-            m = nn.Softmax(dim=1)
-            L.append(
+            softmax = nn.Softmax(dim=1)
+            index_pred_probs.append(
                 [index[0], labels.item()]
-                + m(encoder_out).detach().cpu().numpy().tolist()[0]
+                + softmax(encoder_out).detach().cpu().numpy().tolist()[0]
             )
             Y_predit.append(encoder_out.max(1)[1].item())
             Y_true.append(labels.item())
@@ -1270,11 +1269,11 @@ def runBestNet(
                         correct_pred.append(index[i][0])
                 class_test_total[label] += 1
 
-            if First:
+            if first:
                 data_decoded = torch.cat((decoder_out, labels.view(-1, 1)), dim=1)
                 data_encoder = torch.cat((encoder_out, labels.view(-1, 1)), dim=1)
 
-                First = False
+                first = False
             else:
 
                 tmp1 = torch.cat((decoder_out, labels.view(-1, 1)), dim=1)
@@ -1284,7 +1283,7 @@ def runBestNet(
                 data_encoder = torch.cat((data_encoder, tmp2), dim=0)
 
     if best_test != sum(class_test_correct):
-        print("!!!!!!! Problem !!!!!!!")
+        print("!!!!!!! Problem !!!!!!!")  # ?
     class_train = (class_train_correct / class_train_total).reshape(1, -1)
     best_value[0] = sum(class_train_correct) / sum(class_train_total)
     class_train = np.hstack((best_value, class_train))
@@ -1298,7 +1297,7 @@ def runBestNet(
                 "{}Labelspred_softmax.csv".format(outputPath), sep=";", header=0
             )
 
-            soft = pd.DataFrame(L)
+            soft = pd.DataFrame(index_pred_probs)
             soft = pd.DataFrame(
                 np.concatenate((df.values, soft.values[:, :])),
                 columns=["Name", "Labels"]
@@ -1307,31 +1306,32 @@ def runBestNet(
             soft.to_csv("{}Labelspred_softmax.csv".format(outputPath), sep=";", index=0)
         else:
             soft = pd.DataFrame(
-                L,
+                index_pred_probs,
                 columns=["Name", "Labels"]
                 + ["Proba class " + str(i) for i in range(class_len)],
             )
             soft.to_csv("{}Labelspred_softmax.csv".format(outputPath), sep=";", index=0)
     except FileNotFoundError:
         soft = pd.DataFrame(
-            L,
+            index_pred_probs,
             columns=["Name", "Labels"]
             + ["Proba class " + str(i) for i in range(class_len)],
         )
         soft.to_csv("{}Labelspred_softmax.csv".format(outputPath), sep=";", index=0)
 
-    Lung_decoded = data_decoded.cpu().detach().numpy()
-    Label = ["Label"] + list(Lung_decoded[:, -1].astype(int) + 1)
-    Name = ["Name"] + [x + 2 for x in range(test_len)]
-    Label = np.vstack((np.array(Name), np.array(Label)))
-    Lung = np.delete(Lung_decoded, -1, axis=1)
-    Lung = np.hstack((feature_name.reshape(-1, 1), Lung.T))
+    # Lung_decoded = data_decoded.cpu().detach().numpy()
+    # Label = ["Label"] + list(Lung_decoded[:, -1].astype(int) + 1)
+    # Name = ["Name"] + [x + 2 for x in range(test_len)]
+    # Label = np.vstack((np.array(Name), np.array(Label)))
+    # Lung = np.delete(Lung_decoded, -1, axis=1)
+    # Lung = np.hstack((feature_name.reshape(-1, 1), Lung.T))
     # Lung = np.vstack((Label, np.array( L).T, Lung))
     # res = pd.DataFrame(Lung)
     # res.to_csv('{}recondecoded_BestNet_{}.csv'.format(outputPath, str(run_model)),sep=';',index=0, header=0)
-    print("-----------------------")
-    print("Saved file to ", str(outputPath))
-    print("-----------------------")
+    # print("-----------------------")
+    # print("Saved file to ", str(outputPath))
+    # print("-----------------------")
+
     normGenes = selectf(net.state_dict()["encoder.0.weight"], feature_name)
 
     return (
@@ -1353,7 +1353,7 @@ def packClassResult(accuracy_train, accuracy_test, fold_nb, label_name):
         accuracy_train: List, class_train in different fold
         accuracy_test: List, class_test in different fold 
         fold_nb: number of fold  
-        label_name: name of different classes(Ex: Class 1， Class 2)
+        label_name: name of different classes(Ex: Class 1, Class 2)
     Return:
         df_accTrain: dataframe, training accuracy per Class in different fold 
         df_acctest: dataframe, testing accuracy per Class in different fold     
