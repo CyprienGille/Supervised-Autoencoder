@@ -1513,6 +1513,7 @@ def ReadData(
         decimal=",",
         header=0,
         encoding="ISO-8859-1",
+        low_memory=False,
     )
     X = (data_pd.iloc[1:, 1:].values.astype(float)).T
     Y = data_pd.iloc[0, 1:].values.astype(float).astype(np.int64)
@@ -1527,11 +1528,6 @@ def ReadData(
     if doLog:
         X = np.log(abs(X + 1))  # Transformation
 
-    X1 = X[np.where(Y == label_name[0])[0], :]
-    X2 = X[np.where(Y == label_name[1])[0], :]
-
-    difference = np.mean(X1, axis=0) - np.mean(X2, axis=0)
-
     X = X - np.mean(X, axis=0)
     if doScale:
         X = scale(X, axis=0)  # Standardization along rows
@@ -1541,8 +1537,8 @@ def ReadData(
     ):  # convert string labels to number (0,1,2....)
         Y = np.where(Y == label, index, Y)
     Y = Y.astype(np.int64)
-    if not Y.all():
-        Y += 1  # 0,1,2,3.... labels -> 1,2,3,4... labels
+    # if not Y.all():
+    #     Y += 1  # 0,1,2,3.... labels -> 1,2,3,4... labels
 
     return X, Y, feature_name, label_name, patient_name
 
