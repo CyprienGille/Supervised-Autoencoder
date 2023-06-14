@@ -10,7 +10,7 @@ if "../functions/" not in sys.path:
     sys.path.append("../functions/")
 import os
 
-import functions.functions_compare as ff
+import functions.functions_compare as fc
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import scale
@@ -27,8 +27,8 @@ if __name__ == "__main__":
     if not os.path.exists(outputPath):  # make the directory if it does not exist
         os.makedirs(outputPath)
 
-    Seed = [5, 6, 7]
-    alglist = [
+    SEEDS = [5, 6, 7]
+    algo_list = [
         "svm",
         "plsda",
         "RF",
@@ -36,10 +36,10 @@ if __name__ == "__main__":
     ]  # ML algorithms to compare to
 
     doScale = True  # scaling along rows
-    doTopgenes = True  # Features selection
+    doTopgenes = True  # feature ranking
 
     # Load data
-    X, Yr, nbr_clusters, feature_names = ff.readData(filename)
+    X, Yr, nbr_clusters, feature_names = fc.readData(filename)
 
     # Data Preprocessing
     X = np.log(abs(X + 1))
@@ -50,28 +50,28 @@ if __name__ == "__main__":
     ######## Main #######
 
     print("Started training")
-    for i in Seed:
+    for seed in SEEDS:
         # Processing
-        print(f"------ Seed {i} ------")
+        print(f"------ Seed {seed} ------")
         (
             accTestCompare,
             df_timeElapsed,
             aucTestCompare,
             df_featureList,
-        ) = ff.basic_run_other(
+        ) = fc.basic_run_other(
             X,
             Yr,
             nbr_clusters,
-            alglist,
+            algo_list,
             genenames=feature_names,
             clusternames=None,
             nfold=4,
-            rng=i,
+            rng=seed,
             doTopGenes=True,
         )
         df_timeElapsed.to_csv(outputPath + "timeElapsed.csv")
 
-        if i == Seed[0]:
+        if seed == SEEDS[0]:
             accTestCompare_final = accTestCompare.iloc[:4, :]
             aucTestCompare_final = aucTestCompare.iloc[:4, :]
             if doTopgenes:
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             if doTopgenes:
                 for met in range(len(df_featureList_final)):
                     df_featureList_final[met] = df_featureList_final[met].join(
-                        df_featureList[met]["weights"], rsuffix=" {}".format(i)
+                        df_featureList[met]["weights"], rsuffix=" {}".format(seed)
                     )
     mean = pd.DataFrame(accTestCompare_final.mean(axis=0))
 
@@ -115,6 +115,6 @@ if __name__ == "__main__":
     aucTestCompare_final.to_csv(outputPath + "aucCompare.csv")
 
     if doTopgenes:
-        for i, algo in enumerate(alglist):
+        for seed, algo in enumerate(algo_list):
 
-            df_featureList_final[i].to_csv(f"{outputPath}topgenes_{algo}.csv")
+            df_featureList_final[seed].to_csv(f"{outputPath}topgenes_{algo}.csv")
