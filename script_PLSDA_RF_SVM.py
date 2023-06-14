@@ -21,7 +21,8 @@ if __name__ == "__main__":
     # Set params :
     # filename = "LUNG.csv"
     # filename = "BRAIN_MID.csv"
-    filename = "GC_Brest_D_MB.csv"
+    # filename = "GC_Brest_D_MB.csv"
+    filename = "Th12F_meanFill.csv"
 
     outputPath = "results_compare/" + filename.split(".")[0] + "/"
     if not os.path.exists(outputPath):  # make the directory if it does not exist
@@ -29,11 +30,13 @@ if __name__ == "__main__":
 
     SEEDS = [5, 6, 7]
     algo_list = [
-        "svm",
+        # "svm",
+        "Lasso",
         "plsda",
         "RF",
-        # "logreg",
+        "logreg",
     ]  # ML algorithms to compare to
+    # Note: svm takes a long time because of the parameter grid search
 
     doScale = True  # scaling along rows
     doTopgenes = True  # feature ranking

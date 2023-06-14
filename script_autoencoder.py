@@ -157,7 +157,7 @@ if __name__ == "__main__":
         os.makedirs(outputPath)
 
     # Load data
-    X, Y, feature_names, label_name, patient_name, LFC_Rank = ft.ReadData(
+    X, Y, feature_names, label_name, patient_name = ft.ReadData(
         file_name, TIRO_FORMAT=TIRO_FORMAT, doScale=doScale, doLog=doLog
     )
 

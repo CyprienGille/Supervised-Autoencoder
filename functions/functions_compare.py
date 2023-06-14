@@ -2180,8 +2180,7 @@ import warnings
 
 
 def readData(filename):
-    DATADIR = "datas/"
-    #    df_X = pd.read_csv(DATADIR+'LUNG.csv',delimiter=';', decimal=",",header=0,encoding="ISO-8859-1", low_memory=False)
+    DATADIR = "data/"
     df_X = pd.read_csv(
         DATADIR + str(filename),
         delimiter=";",
@@ -2190,7 +2189,6 @@ def readData(filename):
         encoding="ISO-8859-1",
         low_memory=False,
     )
-    #    df_X = pd.read_csv(DATADIR+'COVID.csv',delimiter=';', decimal=",",header=0,encoding="ISO-8859-1", low_memory=False)
 
     df_names = df_X["Name"]
     feature_names = df_names[1:].values.astype(str)
@@ -2224,7 +2222,7 @@ def basic_run_other(
 
     np.random.seed(rng)  # reproducible
 
-    n, d = X.shape  # n is never used
+    _, d = X.shape
 
     # parameter checking
     if genenames is None:
@@ -2240,8 +2238,6 @@ def basic_run_other(
     X, YR = drop_cells(X, YR, nfold)
 
     # Initialization
-
-    sil_train = np.zeros((nfold))
 
     kf = KFold(n_splits=nfold, random_state=rng, shuffle=True)
 
@@ -2264,10 +2260,10 @@ def basic_run_other(
         Ytrain = YR[train_ind]
         Ytest = YR[test_ind]
 
-        # start loop of other algorithms' comparison
+        # start loop of other algorithms comparison
 
         for j, alg in enumerate(alglist):
-            get_features = lambda m: None
+            get_features = lambda m: None  # default get_features, will be overriden
             if alg == "svm":
 
                 tuned_parameters = [
@@ -2328,9 +2324,6 @@ def basic_run_other(
                 Ypred_train.astype("int64"), Ytrain
             )
 
-            if alg == "plsda":
-                sil_train[i] = metrics.silhouette_score(model.x_scores_, Ypred_train)
-
             if (
                 np.unique(Ytest).shape[0] == 2
                 and np.unique(Ypred_test.astype("int64")).shape[0] == 2
@@ -2390,7 +2383,6 @@ def basic_run_other(
         colauc.append(met + " Recall")
         colauc.append(met + " F1 score")
     df_compauc = pd.DataFrame(AUC_test_comp, index=ind_df_comp, columns=colauc)
-    df_compauc["sil_plsda"] = sil_train
     df_compauc.loc["Mean"] = df_compauc.mean()
 
     alglen = len(alglist)
