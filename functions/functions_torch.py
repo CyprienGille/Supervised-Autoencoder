@@ -1521,15 +1521,25 @@ from sklearn.preprocessing import scale as scale
 def ReadData(
     file_name, doScale=True, doLog=True,
 ):
+    try:
+        data_pd = pd.read_csv(
+            "data/" + str(file_name),
+            delimiter=";",
+            decimal=",",
+            header=0,
+            encoding="ISO-8859-1",
+            low_memory=False,
+        )
+    except:
+        data_pd = pd.read_csv(
+            "datas/" + str(file_name),
+            delimiter=";",
+            decimal=",",
+            header=0,
+            encoding="ISO-8859-1",
+            low_memory=False,
+        )
 
-    data_pd = pd.read_csv(
-        "data/" + str(file_name),
-        delimiter=";",
-        decimal=",",
-        header=0,
-        encoding="ISO-8859-1",
-        low_memory=False,
-    )
     X = (data_pd.iloc[1:, 1:].values.astype(float)).T
     Y = data_pd.iloc[0, 1:].values.astype(float).astype(np.int64)
     col = data_pd.columns.to_list()
