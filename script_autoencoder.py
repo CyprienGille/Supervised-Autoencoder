@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # Classification
     # Weights for each class
     # (see https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html#torch.nn.CrossEntropyLoss for more details)
-    class_weights = [1, 1]
+    class_weights = [1.0, 1.0]
     # Loss function
     criterion_classification = nn.CrossEntropyLoss(
         reduction="sum", weight=torch.Tensor(class_weights).to(DEVICE)
@@ -96,8 +96,8 @@ if __name__ == "__main__":
     ## Dataset choice
     # file_name = "LUNG.csv"
     # file_name = "BRAIN_MID.csv"
-    file_name = "GC_Breast_D_MB.csv"
-    # file_name = "Th12F_meanFill.csv"
+    # file_name = "GC_Breast_D_MB.csv"
+    file_name = "Th12F_meanFill.csv"
 
     ## Choose Architecture
     # net_name = 'LeNet'
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     # Do projection at the middle layer or not
     DO_PROJ_MIDDLE = False
     # Do projection on the decoder part or not
-    DO_PROJ_DECODER = True
+    DO_PROJ_DECODER = False
 
     ETA = 100  # Controls feature selection (projection) (L1, L11, L21)
     RHO = 0.6  # Controls feature selection for l1inf
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         TYPE_PROJ = "No_proj"
         TYPE_PROJ_NAME = "No_proj"
     else:
-        # TYPE_PROJ = ft.proj_l1ball    # projection l1
+        # TYPE_PROJ = ft.proj_l1ball  # projection l1
         TYPE_PROJ = ft.proj_l11ball  # original projection l11 (col-wise zeros)
         # TYPE_PROJ = ft.proj_l21ball   # projection l21
         # TYPE_PROJ = ft.proj_l1infball  # projection l1,inf
@@ -132,7 +132,7 @@ if __name__ == "__main__":
         TYPE_PROJ_NAME = TYPE_PROJ.__name__
 
     AXIS = 1  #  1 for columns (features), 0 for rows (neurons)
-    TOL = 1e-4  # error margin for the L1inf algorithm
+    TOL = 1e-3  # error margin for the L1inf algorithm and gradient masking
 
     bW = 0.5  # Kernel size for distribution plots
 
@@ -236,12 +236,8 @@ if __name__ == "__main__":
             if GRADIENT_MASK:
                 print("\n--------Running with masked gradient-----")
                 print("-----------------------")
-                zero_list = []
-                tol = 1.0e-3
-                for index, param in enumerate(list(net.parameters())):
-                    if index < len(list(net.parameters())) / 2 - 2 and index % 2 == 0:
-                        ind_zero = torch.where(torch.abs(param) < tol)
-                        zero_list.append(ind_zero)
+
+                prev_data = [param.data for param in list(net.parameters())]
 
                 # Get initial network and set zeros
                 # Recall the SEED to get the initial parameters
@@ -265,9 +261,24 @@ if __name__ == "__main__":
                     optimizer, 150, gamma=0.1
                 )  # unused in the paper
 
-                for index, param in enumerate(list(net.parameters())):
-                    if index < len(list(net.parameters())) / 2 - 2 and index % 2 == 0:
-                        param.data[zero_list[int(index / 2)]] = 0
+                net_parameters = list(net.parameters())
+                for index, param in enumerate(net_parameters):
+                    is_middle = index == (len(net_parameters) / 2) - 1
+                    is_decoder_layer = index >= len(net_parameters) / 2
+                    if (
+                        not DO_PROJ_MIDDLE
+                    ) and is_middle:  # Do no gradient masking at middle layer
+                        pass
+                    elif is_decoder_layer and (
+                        not DO_PROJ_DECODER
+                    ):  # Do no gradient masking on the decoder layers
+                        pass
+                    elif index % 2 == 0:
+                        param.data = torch.where(
+                            prev_data[index].abs() < TOL,
+                            torch.zeros_like(param.data),
+                            param.data,
+                        )
 
                 run_model = "MaskGrad"
                 (
@@ -291,7 +302,7 @@ if __name__ == "__main__":
                     lr_scheduler,
                     N_EPOCHS_MASKGRAD,
                     run_model,
-                    zero_list,
+                    DO_PROJ_MIDDLE,
                     DO_PROJ_DECODER,
                     ETA,
                     AXIS=AXIS,
@@ -636,11 +647,15 @@ if __name__ == "__main__":
     for keys in spasity_w.keys():
         spasity_percentage[keys] = spasity_w[keys] * 100
     print("spasity % of all layers \n", spasity_percentage)
-    print("-----------------------")
 
     weights_decoder, spasity_w_decoder = fnp.weights_and_sparsity(net.decoder)
-    mat_in = net.state_dict()["encoder.0.weight"]
+    spasity_percentage_decoder = {}
+    for keys in spasity_w_decoder.keys():
+        spasity_percentage_decoder[keys] = spasity_w_decoder[keys] * 100
+    print("spasity % of all layers \n", spasity_percentage_decoder)
+    print("-----------------------")
 
+    mat_in = net.state_dict()["encoder.0.weight"]
     mat_col_sparsity = ft.sparsity_col(mat_in, device=DEVICE)
     print(" Column sparsity of input matrix: \n", mat_col_sparsity)
     mat_in_sparsity = ft.sparsity_line(mat_in, device=DEVICE)

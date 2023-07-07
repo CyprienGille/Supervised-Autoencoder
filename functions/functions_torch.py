@@ -763,9 +763,24 @@ def RunAutoEncoder(
 
             # Set the gradient as 0
             if run_model == "MaskGrad":
-                for index, param in enumerate(list(net.parameters())):
-                    if index < len(list(net.parameters())) / 2 - 2 and index % 2 == 0:
-                        param.grad[DO_PROJ_MIDDLE[int(index / 2)]] = 0
+                net_parameters = list(net.parameters())
+                for index, param in enumerate(net_parameters):
+                    is_middle = index == (len(net_parameters) / 2) - 1
+                    is_decoder_layer = index >= len(net_parameters) / 2
+                    if (
+                        not DO_PROJ_MIDDLE
+                    ) and is_middle:  # Do no gradient masking at middle layer
+                        pass
+                    elif is_decoder_layer and (
+                        not DO_PROJ_DECODER
+                    ):  # Do no gradient masking on the decoder layers
+                        pass
+                    elif index % 2 == 0:
+                        param.grad = torch.where(
+                            param.data.abs() < 1e-4,
+                            torch.zeros_like(param.grad),
+                            param.grad,
+                        )
             optimizer.step()
 
             with torch.no_grad():
@@ -805,8 +820,8 @@ def RunAutoEncoder(
         if run_model == "ProjectionLastEpoch" and epoch_idx == (N_EPOCHS - 1):
             net_parameters = list(net.parameters())
             for index, param in enumerate(net_parameters):
-                is_middle = index == len(net_parameters) / 2 - 2
-                is_decoder_layer = index > len(net_parameters) / 2
+                is_middle = index == len(net_parameters) / 2 - 1
+                is_decoder_layer = index >= len(net_parameters) / 2
                 if (
                     DO_PROJ_MIDDLE == False and is_middle
                 ):  # Do no projection at middle layer
